@@ -2262,6 +2262,132 @@ fn get_browser_url(app_name: &str, window_title: &str) -> Option<String> {
 /// 获取当前活动窗口信息 (Linux X11，使用 xdotool + xprop)
 #[cfg(target_os = "linux")]
 pub fn get_active_window() -> Result<ActiveWindow> {
+    // 检测 session type：Wayland 或 X11
+    let session_type = std::env::var("XDG_SESSION_TYPE").unwrap_or_default();
+    if session_type.to_lowercase() == "wayland" {
+        return get_active_window_wayland();
+    }
+    get_active_window_x11()
+}
+
+/// Wayland 环境下通过 AT-SPI (Accessibility) 获取活动窗口信息
+#[cfg(target_os = "linux")]
+fn get_active_window_wayland() -> Result<ActiveWindow> {
+    use tokio::runtime::Handle;
+    match Handle::try_current() {
+        Ok(handle) => {
+                    // 已在 tokio runtime 中, 用 block_in_place 避免 nested runtime panic
+            tokio::task::block_in_place(|| {
+                handle.block_on(get_active_window_wayland_async())
+            })
+        }
+        Err(_) => {
+            // 不在 tokio runtime 中，建立新的
+            let rt = tokio::runtime::Runtime::new()
+                .map_err(|e| AppError::Unknown(format!("无法创建 tokio runtime: {}", e)))?;
+            rt.block_on(get_active_window_wayland_async())
+        }
+    }
+}
+
+/// Wayland AT-SPI 异步实现
+#[cfg(target_os = "linux")]
+async fn get_active_window_wayland_async() -> Result<ActiveWindow> {
+    use atspi::AccessibilityConnection;
+    use atspi::State;
+    use atspi::connection::set_session_accessibility;
+    use atspi::proxy::accessible::ObjectRefExt;
+
+    let atspi_conn = AccessibilityConnection::new().await
+        .map_err(|e| AppError::Unknown(format!("AT-SPI 连接失败: {}", e)))?;
+    let conn = atspi_conn.connection();
+
+    set_session_accessibility(true).await
+        .map_err(|e| AppError::Unknown(format!("无法启用 AT-SPI: {}", e)))?;
+
+    let apps = atspi_conn.root_accessible_on_registry().await
+        .map_err(|e| AppError::Unknown(format!("AT-SPI registry 失败: {}", e)))?
+        .get_children().await
+        .map_err(|e| AppError::Unknown(format!("AT-SPI 获取应用列表失败: {}", e)))?;
+
+    for app_ref in apps.iter() {
+        let app_proxy = match app_ref.clone().into_accessible_proxy(conn).await {
+            Ok(p) => p,
+            Err(_) => continue,
+        };
+
+        let app_name = app_proxy.name().await.unwrap_or_default();
+
+        for frame_ref in app_proxy.get_children().await.unwrap_or_default() {
+            if frame_ref.is_null() { continue; }
+
+            let frame: atspi::proxy::accessible::AccessibleProxy<'_> =
+                match frame_ref.clone().into_accessible_proxy(conn).await {
+                    Ok(p) => p,
+                    Err(_) => continue,
+                };
+
+            let state: atspi::StateSet = match frame.get_state().await {
+                Ok(s) => s,
+                Err(_) => continue,
+            };
+
+            if !state.contains(State::Active) {
+                continue;
+            }
+
+            let window_title = frame.name().await.unwrap_or_default();
+
+            // 通过 zbus 从 D-Bus bus name 获取 PID
+            let pid: u32 = {
+                let dbus_proxy: zbus::fdo::DBusProxy<'_> = match zbus::fdo::DBusProxy::new(conn).await {
+                    Ok(p) => p,
+                    Err(_) => { continue; }
+                };
+                let bus_name = frame.inner().destination().clone();
+                dbus_proxy.get_connection_unix_process_id(bus_name).await.unwrap_or(0u32)
+            };
+
+            let executable_path = if pid > 0 {
+                std::fs::read_link(format!("/proc/{}/exe", pid))
+                    .ok()
+                    .map(|p| p.to_string_lossy().to_string())
+            } else {
+                None
+            };
+
+            let refined_name = if pid > 0 {
+                std::fs::read_to_string(format!("/proc/{}/comm", pid))
+                    .unwrap_or(app_name.clone())
+                    .trim()
+                    .to_string()
+            } else {
+                app_name.clone()
+            };
+
+            let browser_url = if is_browser_app(&refined_name) {
+                extract_url_from_title(&window_title)
+            } else {
+                None
+            };
+
+            let display_name = normalize_display_app_name(&refined_name);
+
+            return Ok(ActiveWindow {
+                app_name: display_name,
+                window_title,
+                browser_url,
+                executable_path,
+                window_bounds: None,
+            });
+        }
+    }
+
+    Err(AppError::Unknown("Wayland: 找不到活动窗口".to_string()))
+}
+
+#[cfg(target_os = "linux")]
+fn get_active_window_x11() -> Result<ActiveWindow> {
     // 使用 xdotool 获取当前活动窗口 ID
     let wid_output = run_monitor_command_with_timeout(
         Command::new("xdotool").arg("getactivewindow"),
