@@ -698,30 +698,46 @@ impl ScreenshotService {
         let temp_png = screenshots_dir.join(format!("{time_str}_temp.png"));
         let final_jpg = screenshots_dir.join(format!("{time_str}.jpg"));
 
-        // 尝试使用 scrot（常见 X11 截屏工具）
-        let scrot_result = Command::new("scrot")
-            .args(["-o", &temp_png.to_string_lossy()])
-            .output();
+        // 检测 session type 决定截图工具优先顺序
+        let session_type = std::env::var("XDG_SESSION_TYPE").unwrap_or_default();
+        let is_wayland = session_type.to_lowercase() == "wayland";
 
-        let captured = match scrot_result {
-            Ok(output) if output.status.success() && temp_png.exists() => true,
-            _ => {
-                // 降级：使用 ImageMagick import
-                let import_result = Command::new("import")
-                    .args(["-window", "root", &temp_png.to_string_lossy().to_string()])
-                    .output();
+        let captured = if is_wayland {
+            // Wayland: gnome-screenshot → grim
+            let gnome_result = Command::new("gnome-screenshot")
+                .args(["-f", &temp_png.to_string_lossy()])
+                .output();
 
-                match import_result {
-                    Ok(output) if output.status.success() && temp_png.exists() => true,
-                    _ => {
-                        // 再降级：使用 maim
-                        let maim_result = Command::new("maim")
-                            .arg(&temp_png.to_string_lossy().to_string())
-                            .output();
+            match gnome_result {
+                Ok(output) if output.status.success() && temp_png.exists() => true,
+                _ => {
+                    let grim_result = Command::new("grim")
+                        .arg(&temp_png.to_string_lossy().to_string())
+                        .output();
+                    matches!(grim_result, Ok(output) if output.status.success() && temp_png.exists())
+                }
+            }
+        } else {
+            // X11: scrot → import → maim
+            let scrot_result = Command::new("scrot")
+                .args(["-o", &temp_png.to_string_lossy()])
+                .output();
 
-                        match maim_result {
-                            Ok(output) if output.status.success() && temp_png.exists() => true,
-                            _ => false,
+            match scrot_result {
+                Ok(output) if output.status.success() && temp_png.exists() => true,
+                _ => {
+                    let import_result = Command::new("import")
+                        .args(["-window", "root", &temp_png.to_string_lossy().to_string()])
+                        .output();
+
+                    match import_result {
+                        Ok(output) if output.status.success() && temp_png.exists() => true,
+                        _ => {
+                            let maim_result = Command::new("maim")
+                                .arg(&temp_png.to_string_lossy().to_string())
+                                .output();
+
+                            matches!(maim_result, Ok(output) if output.status.success() && temp_png.exists())
                         }
                     }
                 }

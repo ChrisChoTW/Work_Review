@@ -1877,25 +1877,29 @@ async fn main() {
     let app_lifecycle_state = Arc::new(Mutex::new(AppLifecycleState::default()));
 
     // 构建 Tauri 应用
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
-        // 开机自启动插件（macOS 使用 LaunchAgent，Windows 使用注册表）
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
-        ))
-        .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
-            // 当用户尝试打开第二个实例时，将焦点给到现有窗口
+        ));
+
+    // single-instance plugin 在 Linux + tokio::main 下会触发 nested runtime panic
+    #[cfg(not(target_os = "linux"))]
+    {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             if let Err(e) = reveal_main_window(&app.clone(), None) {
                 log::warn!("恢复主窗口失败: {e}");
             }
             log::info!("检测到重复打开，参数: {argv:?}, 工作目录: {cwd}");
-        }))
-        .manage(app_state.clone())
+        }));
+    }
+
+    builder.manage(app_state.clone())
         .manage(app_lifecycle_state.clone())
         // 系统托盘在 setup 中创建 (Tauri v2)
         .on_window_event(|window, event| {
