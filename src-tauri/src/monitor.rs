@@ -2343,6 +2343,7 @@ pub fn get_active_window() -> Result<ActiveWindow> {
         window_title,
         browser_url,
         executable_path,
+        window_bounds: None,
     })
 }
 
