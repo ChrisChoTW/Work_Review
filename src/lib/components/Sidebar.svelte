@@ -3,6 +3,7 @@
   import { invoke } from '@tauri-apps/api/core';
   import { createEventDispatcher, onMount } from 'svelte';
   import { getVersion } from '@tauri-apps/api/app';
+  import { t } from '$lib/i18n/index.js';
 
   export let isRecording = true;
   // 动态获取版本号，唯一来源为 tauri.conf.json
@@ -19,13 +20,14 @@
   
   const dispatch = createEventDispatcher();
 
-  const navItems = [
-    { path: '/', label: '概览', icon: 'home' },
-    { path: '/timeline', label: '时间线', icon: 'timeline' },
-    { path: '/report', label: '日报', icon: 'report' },
-    { path: '/ask', label: '助手', icon: 'ask' },
-    { path: '/settings', label: '设置', icon: 'settings' },
-    { path: '/about', label: '关于', icon: 'info' },
+  // 使用 reactive 宣告，語系切換時自動更新
+  $: navItems = [
+    { path: '/', label: $t('nav.overview'), icon: 'home' },
+    { path: '/timeline', label: $t('timeline.title'), icon: 'timeline' },
+    { path: '/report', label: $t('nav.report'), icon: 'report' },
+    { path: '/ask', label: $t('nav.ask'), icon: 'ask' },
+    { path: '/settings', label: $t('settings.title'), icon: 'settings' },
+    { path: '/about', label: $t('nav.about'), icon: 'info' },
   ];
 
   function cycleTheme() {
@@ -67,7 +69,7 @@
         </div>
         <div class="min-w-0">
           <h1 class="sidebar-brand-title">Work Review</h1>
-          <p class="sidebar-brand-subtitle">记录 · 分析 · 证明</p>
+          <p class="sidebar-brand-subtitle">{$t('app.slogan')}</p>
         </div>
       </div>
     </div>
@@ -85,7 +87,7 @@
             {/if}
           </span>
           <span class="text-[12px] font-semibold tracking-[0.08em] text-slate-500 dark:text-slate-400">
-            记录状态
+            {$t('recording.status')}
           </span>
         </div>
         <button
@@ -95,7 +97,7 @@
               ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300' 
               : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300'}"
         >
-          {#if isPaused}恢复{:else}暂停{/if}
+          {#if isPaused}{$t('recording.resume')}{:else}{$t('recording.pause')}{/if}
         </button>
       </div>
     </div>
@@ -161,7 +163,7 @@
 
         <button on:click={cycleTheme}
           class="sidebar-footer-action"
-          title="{theme === 'system' ? '自动' : theme === 'light' ? '浅色' : '深色'}模式">
+          title="{theme === 'system' ? $t('theme.auto') : theme === 'light' ? $t('theme.light') : $t('theme.dark')}">
           {#if theme === 'system'}
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
           {:else if theme === 'light'}

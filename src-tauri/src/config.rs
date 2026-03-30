@@ -452,6 +452,13 @@ pub struct AppConfig {
     /// 背景图片模糊程度 (0 = 清晰, 1 = 轻微, 2 = 中等)
     #[serde(default = "default_bg_blur")]
     pub background_blur: u8,
+    /// 界面语言（zh-CN, en）
+    #[serde(default = "default_locale")]
+    pub locale: String,
+}
+
+fn default_locale() -> String {
+    "zh-CN".to_string()
 }
 
 fn default_work_start() -> u8 {
@@ -509,6 +516,7 @@ impl Default for AppConfig {
             background_image: None,
             background_opacity: 0.25,
             background_blur: 1,
+            locale: default_locale(),
         }
     }
 }

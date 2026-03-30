@@ -1,4 +1,5 @@
-use crate::analysis::{append_custom_prompt, format_duration, Analyzer, GeneratedReport};
+use crate::analysis::{append_custom_prompt_locale, format_duration, format_duration_locale, Analyzer, GeneratedReport};
+use crate::i18n;
 use crate::config::AiProvider;
 use crate::database::{Activity, DailyStats};
 use crate::error::{AppError, Result};
@@ -16,6 +17,7 @@ pub struct SummaryAnalyzer {
     model: String,
     api_key: Option<String>,
     custom_prompt: String,
+    locale: String,
     client: Client,
 }
 
@@ -26,6 +28,7 @@ impl SummaryAnalyzer {
         model: &str,
         api_key: Option<&str>,
         custom_prompt: &str,
+        locale: &str,
     ) -> Self {
         // 创建带超时配置的 HTTP 客户端
         let client = Client::builder()
@@ -40,6 +43,7 @@ impl SummaryAnalyzer {
             model: model.to_string(),
             api_key: api_key.map(|s| s.to_string()),
             custom_prompt: custom_prompt.to_string(),
+            locale: locale.to_string(),
             client,
         }
     }
@@ -84,7 +88,7 @@ impl SummaryAnalyzer {
                 "messages": [
                     {
                         "role": "system",
-                        "content": "你是一个专业的工作效率分析助手，帮助用户分析和总结每日工作。请用中文回答。"
+                        "content": i18n::ai_system_prompt(&self.locale)
                     },
                     {
                         "role": "user",
@@ -139,7 +143,7 @@ impl SummaryAnalyzer {
                         "content": prompt
                     }
                 ],
-                "system": "你是一个专业的工作效率分析助手，帮助用户分析和总结每日工作。请用中文回答。"
+                "system": i18n::ai_system_prompt(&self.locale)
             }))
             .send()
             .await?;
@@ -177,7 +181,7 @@ impl SummaryAnalyzer {
             .json(&json!({
                 "contents": [{
                     "parts": [{
-                        "text": format!("你是一个专业的工作效率分析助手，帮助用户分析和总结每日工作。请用中文回答。\n\n{}", prompt)
+                        "text": format!("{}\n\n{}", i18n::ai_system_prompt(&self.locale), prompt)
                     }]
                 }],
                 "generationConfig": {
@@ -322,34 +326,51 @@ impl SummaryAnalyzer {
     /// 当 AI 不可用时的备用内容
     fn generate_fallback_ai_content(&self, keywords: &[String], apps_list: &str) -> String {
         let mut content = String::new();
+        let en = i18n::is_en(&self.locale);
 
-        content.push_str("## 🎯 今日工作内容\n\n");
+        content.push_str(if en { "## Today's Work\n\n" } else { "## 🎯 今日工作内容\n\n" });
         if keywords.is_empty() {
-            content.push_str(&format!(
-                "今日主要使用 {apps_list} 等应用进行工作。持续努力中！\n"
-            ));
+            content.push_str(&if en {
+                format!("Today mainly used {apps_list} for work. Keep it up!\n")
+            } else {
+                format!("今日主要使用 {apps_list} 等应用进行工作。持续努力中！\n")
+            });
         } else {
-            content.push_str(&format!(
-                "今日工作涉及：{}。使用的主要应用包括 {}。\n",
-                keywords
-                    .iter()
-                    .take(5)
-                    .cloned()
-                    .collect::<Vec<_>>()
-                    .join("、"),
-                apps_list
-            ));
+            let joiner = if en { ", " } else { "、" };
+            content.push_str(&if en {
+                format!(
+                    "Today's work involved: {}. Main applications used: {}.\n",
+                    keywords.iter().take(5).cloned().collect::<Vec<_>>().join(joiner),
+                    apps_list
+                )
+            } else {
+                format!(
+                    "今日工作涉及：{}。使用的主要应用包括 {}。\n",
+                    keywords.iter().take(5).cloned().collect::<Vec<_>>().join(joiner),
+                    apps_list
+                )
+            });
         }
 
-        content.push_str("\n## 六、专注度分析\n\n");
-        content.push_str("今日工作整体表现不错，继续保持稳定的工作节奏。\n");
+        content.push_str(if en { "\n## Focus Analysis\n\n" } else { "\n## 六、专注度分析\n\n" });
+        content.push_str(if en {
+            "Overall good focus today, keep up the steady work rhythm.\n"
+        } else {
+            "今日工作整体表现不错，继续保持稳定的工作节奏。\n"
+        });
 
-        content.push_str("\n## 七、明日建议\n\n");
-        content.push_str("建议定期休息，避免久坐。深度工作时可以关闭通讯软件通知，提高专注度。\n");
+        content.push_str(if en { "\n## Tomorrow's Suggestions\n\n" } else { "\n## 七、明日建议\n\n" });
+        content.push_str(if en {
+            "Take regular breaks to avoid sitting too long. Consider turning off messaging notifications during deep work to improve focus.\n"
+        } else {
+            "建议定期休息，避免久坐。深度工作时可以关闭通讯软件通知，提高专注度。\n"
+        });
 
-        content.push_str(
-            "\n---\n*注：由基础模板生成。配置 AI 模型（OpenAI/Ollama）后可获得更深度的智能分析。*",
-        );
+        content.push_str(if en {
+            "\n---\n*Note: Generated using basic template. Configure an AI model (OpenAI/Ollama) for deeper intelligent analysis.*"
+        } else {
+            "\n---\n*注：由基础模板生成。配置 AI 模型（OpenAI/Ollama）后可获得更深度的智能分析。*"
+        });
 
         content
     }
@@ -367,30 +388,48 @@ impl Analyzer for SummaryAnalyzer {
         log::info!("生成混合模式日报：固定模板 + AI 扩展");
 
         let mut report = String::new();
+        let en = i18n::is_en(&self.locale);
 
         // ==================== 标题 ====================
-        report.push_str(&format!("# 工作日报\n\n**日期：{date}**\n\n"));
+        report.push_str(&format!(
+            "{}\n\n**{}：{date}**\n\n",
+            i18n::daily_report_heading(&self.locale),
+            if en { "Date" } else { "日期" }
+        ));
 
         // ==================== 今日概览 ====================
-        report.push_str("## 一、今日概览\n\n");
-        report.push_str("| 指标 | 数值 |\n");
+        report.push_str(if en { "## 1. Daily Overview\n\n" } else { "## 一、今日概览\n\n" });
+        report.push_str(if en { "| Metric | Value |\n" } else { "| 指标 | 数值 |\n" });
         report.push_str("|:--|--:|\n");
         report.push_str(&format!(
-            "| 总工作时长 | {} |\n",
-            format_duration(stats.total_duration)
+            "| {} | {} |\n",
+            if en { "Total Work Duration" } else { "总工作时长" },
+            format_duration_locale(stats.total_duration, &self.locale)
         ));
-        report.push_str(&format!("| 截图数量 | {} 张 |\n", stats.screenshot_count));
-        report.push_str(&format!("| 使用应用数 | {} 个 |\n", stats.app_usage.len()));
         report.push_str(&format!(
-            "| 访问网站数 | {} 个 |\n",
-            stats.domain_usage.len()
+            "| {} | {}{} |\n",
+            if en { "Screenshots" } else { "截图数量" },
+            stats.screenshot_count,
+            if en { "" } else { " 张" }
+        ));
+        report.push_str(&format!(
+            "| {} | {}{} |\n",
+            if en { "Applications Used" } else { "使用应用数" },
+            stats.app_usage.len(),
+            if en { "" } else { " 个" }
+        ));
+        report.push_str(&format!(
+            "| {} | {}{} |\n",
+            if en { "Websites Visited" } else { "访问网站数" },
+            stats.domain_usage.len(),
+            if en { "" } else { " 个" }
         ));
         report.push('\n');
 
         // ==================== 时间分配 ====================
         if !stats.category_usage.is_empty() {
-            report.push_str("## 二、时间分配\n\n");
-            report.push_str("| 类别 | 时长 | 占比 |\n");
+            report.push_str(if en { "## 2. Time Allocation\n\n" } else { "## 二、时间分配\n\n" });
+            report.push_str(if en { "| Category | Duration | Percentage |\n" } else { "| 类别 | 时长 | 占比 |\n" });
             report.push_str("|:--|--:|--:|\n");
             for cat in &stats.category_usage {
                 let percentage = if stats.total_duration > 0 {
@@ -400,8 +439,8 @@ impl Analyzer for SummaryAnalyzer {
                 };
                 report.push_str(&format!(
                     "| {} | {} | {}% |\n",
-                    crate::monitor::get_category_name(&cat.category),
-                    format_duration(cat.duration),
+                    crate::monitor::get_category_name_locale(&cat.category, &self.locale),
+                    format_duration_locale(cat.duration, &self.locale),
                     percentage
                 ));
             }
@@ -410,15 +449,15 @@ impl Analyzer for SummaryAnalyzer {
 
         // ==================== 应用使用明细 ====================
         if !stats.app_usage.is_empty() {
-            report.push_str("## 三、应用使用明细\n\n");
-            report.push_str("| 序号 | 应用名称 | 使用时长 |\n");
+            report.push_str(if en { "## 3. Application Usage Details\n\n" } else { "## 三、应用使用明细\n\n" });
+            report.push_str(if en { "| # | Application | Duration |\n" } else { "| 序号 | 应用名称 | 使用时长 |\n" });
             report.push_str("|--:|:--|--:|\n");
             for (i, app) in stats.app_usage.iter().enumerate() {
                 report.push_str(&format!(
                     "| {} | {} | {} |\n",
                     i + 1,
                     app.app_name,
-                    format_duration(app.duration)
+                    format_duration_locale(app.duration, &self.locale)
                 ));
             }
             report.push('\n');
@@ -426,29 +465,29 @@ impl Analyzer for SummaryAnalyzer {
 
         // ==================== 网站访问明细 ====================
         if !stats.domain_usage.is_empty() {
-            report.push_str("## 四、网站访问明细\n\n");
-            report.push_str("| 序号 | 网站域名 | 访问时长 |\n");
+            report.push_str(if en { "## 4. Website Visit Details\n\n" } else { "## 四、网站访问明细\n\n" });
+            report.push_str(if en { "| # | Domain | Duration |\n" } else { "| 序号 | 网站域名 | 访问时长 |\n" });
             report.push_str("|--:|:--|--:|\n");
             for (i, domain) in stats.domain_usage.iter().enumerate() {
                 report.push_str(&format!(
                     "| {} | {} | {} |\n",
                     i + 1,
                     domain.domain,
-                    format_duration(domain.duration)
+                    format_duration_locale(domain.duration, &self.locale)
                 ));
             }
             report.push('\n');
         }
 
         // ==================== AI 分析 ====================
-        report.push_str("## 五、AI 分析\n\n");
+        report.push_str(if en { "## 5. AI Analysis\n\n" } else { "## 五、AI 分析\n\n" });
 
         // 准备 AI 输入
         let apps_list = stats
             .app_usage
             .iter()
             .take(8)
-            .map(|a| format!("{} ({})", a.app_name, format_duration(a.duration)))
+            .map(|a| format!("{} ({})", a.app_name, format_duration_locale(a.duration, &self.locale)))
             .collect::<Vec<_>>()
             .join(", ");
 
@@ -464,7 +503,8 @@ impl Analyzer for SummaryAnalyzer {
         let top_keywords = keywords.into_iter().take(8).collect::<Vec<_>>().join(", ");
 
         // 规整的 AI 提示词（站在共同度过工作一天的角度，深入分析数据）
-        let prompt = append_custom_prompt(
+        // AI prompt 保持中文：此提示词发送给 AI 模型处理，不直接显示给用户
+        let prompt = append_custom_prompt_locale(
             format!(
             r#"你是用户今天的工作伙伴，陪伴用户度过了这一天。请仔细分析以下数据，提炼出有价值的洞察，生成一份温暖亲切的工作回顾。
 
@@ -504,7 +544,7 @@ impl Analyzer for SummaryAnalyzer {
 **今日小结**
 
 用1到2句话，像朋友一样总结今天，给予肯定和鼓励。"#,
-            format_duration(stats.total_duration),
+            format_duration_locale(stats.total_duration, &self.locale),
             if apps_list.is_empty() {
                 "无".to_string()
             } else {
@@ -522,6 +562,7 @@ impl Analyzer for SummaryAnalyzer {
             }
         ),
             &self.custom_prompt,
+            &self.locale,
         );
 
         // 调用 AI

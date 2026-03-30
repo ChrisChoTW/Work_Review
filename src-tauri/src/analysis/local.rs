@@ -1,4 +1,5 @@
-use crate::analysis::{append_custom_prompt, format_duration, Analyzer, GeneratedReport};
+use crate::analysis::{append_custom_prompt, format_duration, format_duration_locale, Analyzer, GeneratedReport};
+use crate::i18n;
 use crate::database::{Activity, DailyStats};
 use crate::error::{AppError, Result};
 use async_trait::async_trait;
@@ -14,11 +15,12 @@ pub struct LocalAnalyzer {
     host: String,
     model: String,
     custom_prompt: String,
+    locale: String,
     client: Client,
 }
 
 impl LocalAnalyzer {
-    pub fn new(host: &str, model: &str, custom_prompt: &str) -> Self {
+    pub fn new(host: &str, model: &str, custom_prompt: &str, locale: &str) -> Self {
         // 创建带超时配置的 HTTP 客户端
         let client = Client::builder()
             .timeout(Duration::from_secs(120)) // Ollama 模型推理可能较慢，设置2分钟超时
@@ -30,6 +32,7 @@ impl LocalAnalyzer {
             host: host.to_string(),
             model: model.to_string(),
             custom_prompt: custom_prompt.to_string(),
+            locale: locale.to_string(),
             client,
         }
     }
@@ -71,6 +74,7 @@ impl LocalAnalyzer {
             .take(20)
             .collect();
 
+        // AI prompt 保持中文：此提示词发送给 AI 模型处理，不直接显示给用户
         let prompt = append_custom_prompt(
             format!(
             r#"你是一位风趣幽默的工作效率分析师。请根据以下打工人今日的工作数据，生成一份有温度的工作分析。
@@ -193,20 +197,32 @@ impl Analyzer for LocalAnalyzer {
         log::info!("生成本地日报（尝试调用 Ollama）");
 
         // 首先生成固定的统计部分
-        let mut report = format!("# 工作日报 - {date}\n\n");
+        let mut report = format!("{}\n\n", i18n::daily_report_title(&self.locale, date));
         let mut used_ai = false;
+        let en = i18n::is_en(&self.locale);
 
         // 固定模板部分：数据统计
-        report.push_str("## 一、今日概览\n\n");
+        report.push_str(if en { "## 1. Daily Overview\n\n" } else { "## 一、今日概览\n\n" });
         report.push_str(&format!(
-            "- **总工作时长**: {}\n",
-            format_duration(stats.total_duration)
+            "- **{}**: {}\n",
+            if en { "Total Work Duration" } else { "总工作时长" },
+            format_duration_locale(stats.total_duration, &self.locale)
         ));
-        report.push_str(&format!("- **截图数量**: {} 张\n", stats.screenshot_count));
-        report.push_str(&format!("- **使用应用**: {} 个\n\n", stats.app_usage.len()));
+        report.push_str(&format!(
+            "- **{}**: {}{}\n",
+            if en { "Screenshots" } else { "截图数量" },
+            stats.screenshot_count,
+            if en { "" } else { " 张" }
+        ));
+        report.push_str(&format!(
+            "- **{}**: {}{}\n\n",
+            if en { "Applications Used" } else { "使用应用" },
+            stats.app_usage.len(),
+            if en { "" } else { " 个" }
+        ));
 
         // 时间分配
-        report.push_str("## 二、时间分配\n\n");
+        report.push_str(if en { "## 2. Time Allocation\n\n" } else { "## 二、时间分配\n\n" });
         for cat in &stats.category_usage {
             let percentage = if stats.total_duration > 0 {
                 (cat.duration as f64 / stats.total_duration as f64 * 100.0) as i32
@@ -215,31 +231,31 @@ impl Analyzer for LocalAnalyzer {
             };
             report.push_str(&format!(
                 "- **{}**: {} ({}%)\n",
-                crate::monitor::get_category_name(&cat.category),
-                format_duration(cat.duration),
+                crate::monitor::get_category_name_locale(&cat.category, &self.locale),
+                format_duration_locale(cat.duration, &self.locale),
                 percentage
             ));
         }
 
         // 应用排行
-        report.push_str("\n## 三、应用使用情况\n\n");
+        report.push_str(if en { "\n## 3. Application Usage\n\n" } else { "\n## 三、应用使用情况\n\n" });
         for (i, app) in stats.app_usage.iter().take(5).enumerate() {
             report.push_str(&format!(
                 "{}. **{}**: {}\n",
                 i + 1,
                 app.app_name,
-                format_duration(app.duration)
+                format_duration_locale(app.duration, &self.locale)
             ));
         }
 
         // 网站访问
         if !stats.domain_usage.is_empty() {
-            report.push_str("\n## 四、网站访问\n\n");
+            report.push_str(if en { "\n## 4. Website Visits\n\n" } else { "\n## 四、网站访问\n\n" });
             for domain in stats.domain_usage.iter().take(5) {
                 report.push_str(&format!(
                     "- **{}**: {}\n",
                     domain.domain,
-                    format_duration(domain.duration)
+                    format_duration_locale(domain.duration, &self.locale)
                 ));
             }
         }
@@ -255,27 +271,41 @@ impl Analyzer for LocalAnalyzer {
             Err(e) => {
                 log::warn!("Ollama 调用失败，使用备选内容: {e}");
                 // 使用简单的备选内容
-                report.push_str("\n## 五、今日工作内容\n\n");
+                let joiner = if en { ", " } else { "、" };
                 let apps_list = stats
                     .app_usage
                     .iter()
                     .take(3)
                     .map(|a| a.app_name.clone())
                     .collect::<Vec<_>>()
-                    .join("、");
-                report.push_str(&format!(
-                    "今日主要使用 {apps_list} 等应用进行工作。持续努力中！\n"
-                ));
+                    .join(joiner);
 
-                report.push_str("\n## 六、专注度分析\n\n");
-                report.push_str("今日工作整体表现不错，继续保持稳定的工作节奏。\n");
+                report.push_str(if en { "\n## 5. Today's Work\n\n" } else { "\n## 五、今日工作内容\n\n" });
+                report.push_str(&if en {
+                    format!("Today mainly used {apps_list} for work. Keep it up!\n")
+                } else {
+                    format!("今日主要使用 {apps_list} 等应用进行工作。持续努力中！\n")
+                });
 
-                report.push_str("\n## 七、明日建议\n\n");
-                report.push_str(
-                    "建议定期休息，避免久坐。深度工作时可以关闭通讯软件通知，提高专注度。\n",
-                );
+                report.push_str(if en { "\n## 6. Focus Analysis\n\n" } else { "\n## 六、专注度分析\n\n" });
+                report.push_str(if en {
+                    "Overall good focus today, keep up the steady work rhythm.\n"
+                } else {
+                    "今日工作整体表现不错，继续保持稳定的工作节奏。\n"
+                });
 
-                report.push_str("\n---\n*注：AI 分析暂不可用，使用基础模板生成。*");
+                report.push_str(if en { "\n## 7. Tomorrow's Suggestions\n\n" } else { "\n## 七、明日建议\n\n" });
+                report.push_str(if en {
+                    "Take regular breaks to avoid sitting too long. Consider turning off messaging notifications during deep work to improve focus.\n"
+                } else {
+                    "建议定期休息，避免久坐。深度工作时可以关闭通讯软件通知，提高专注度。\n"
+                });
+
+                report.push_str(if en {
+                    "\n---\n*Note: AI analysis unavailable, generated using basic template.*"
+                } else {
+                    "\n---\n*注：AI 分析暂不可用，使用基础模板生成。*"
+                });
             }
         }
 

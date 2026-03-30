@@ -4,6 +4,7 @@
   import { marked } from 'marked';
   import { formatDuration } from '../../lib/utils/workIntelligence.js';
   import { assistantStore, BASIC_ASSISTANT_MODEL_ID } from '../../lib/stores/assistant.js';
+  import { t } from '$lib/i18n/index.js';
 
   marked.use({
     gfm: true,
@@ -11,10 +12,10 @@
   });
 
   const starterPrompts = [
-    '我这周主要做了什么？',
-    '最近有哪些待办还没收口？',
-    '把今天的工作按 session 总结一下。',
-    '帮我复盘一下最近的工作节奏。',
+    $t('ask.starterPrompts')[0],
+    $t('ask.starterPrompts')[1],
+    $t('ask.starterPrompts')[2],
+    $t('ask.starterPrompts')[3],
   ];
 
   let input = '';
@@ -84,9 +85,9 @@
 
   function sourceLabel(sourceType) {
     const labels = {
-      activity: '活动记录',
-      hourly_summary: '小时摘要',
-      daily_report: '日报',
+      activity: $t('timeline.activityLog'),
+      hourly_summary: $t('timeline.hourlySummary'),
+      daily_report: $t('ask.dailyReport'),
     };
     return labels[sourceType] || sourceType;
   }
@@ -302,8 +303,8 @@
     <div bind:this={chatBody} class="flex-1 overflow-y-auto px-4 pb-40 pt-10" on:scroll={syncStickToBottom}>
       {#if !hasConversation}
         <div class="mx-auto flex min-h-full max-w-4xl flex-col items-center justify-center text-center">
-          <h1 class="mb-2 text-2xl font-semibold tracking-tight text-slate-800 dark:text-slate-100">工作助手</h1>
-          <p class="mb-10 text-sm text-slate-500 dark:text-slate-400">基于你的工作记录回答问题，试试下面的话题</p>
+          <h1 class="mb-2 text-2xl font-semibold tracking-tight text-slate-800 dark:text-slate-100">{$t('ask.title')}</h1>
+          <p class="mb-10 text-sm text-slate-500 dark:text-slate-400">{$t('ask.subtitle')}</p>
           <div class="grid w-full max-w-3xl gap-3 sm:grid-cols-2">
             {#each starterPrompts as prompt}
               <button
@@ -333,7 +334,7 @@
                   {#if message.references?.length}
                     <details class="mt-6 rounded-[24px] bg-slate-50/74 px-4 py-3 ring-1 ring-inset ring-slate-200/60 dark:bg-slate-950/34 dark:ring-slate-800/70">
                       <summary class="cursor-pointer list-none text-sm font-medium text-slate-500 dark:text-slate-400">
-                        查看依据（{message.references.length}）
+                        {$t('ask.viewReferences')}（{message.references.length}）
                       </summary>
 
                       <div class="mt-3 space-y-2">
@@ -385,7 +386,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
               </svg>
               <div class="min-w-0 flex-1">
-                <p class="text-sm font-medium text-rose-700 dark:text-rose-300">请求失败</p>
+                <p class="text-sm font-medium text-rose-700 dark:text-rose-300">{$t('ask.requestFailed')}</p>
                 <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{error}</p>
               </div>
             </div>
@@ -404,7 +405,7 @@
             bind:value={input}
             rows="1"
             class="max-h-[220px] min-h-[26px] w-full resize-none bg-transparent text-[15px] leading-7 text-slate-800 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
-            placeholder="问点什么，比如：我这周主要做了什么？"
+            placeholder={$t('ask.placeholder')}
             on:input={resizeComposer}
             on:keydown={handleComposerKeydown}
           />
@@ -416,18 +417,18 @@
                 on:change={handleModelChange}
                 class="h-8 min-w-[122px] max-w-[176px] cursor-pointer appearance-none rounded-full border border-slate-200/80 bg-slate-100/90 px-3 pr-8 text-[11px] font-medium text-slate-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] outline-none transition hover:bg-slate-200/70 focus:ring-2 focus:ring-slate-300 dark:border-slate-700/80 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700/80 dark:focus:ring-slate-600"
                 style="background-image: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E&quot;); background-repeat: no-repeat; background-position: right 10px center;"
-                aria-label="选择助手模型"
+                aria-label={$t('ask.selectModel')}
               >
-                <option value={BASIC_ASSISTANT_MODEL_ID}>基础模板</option>
+                <option value={BASIC_ASSISTANT_MODEL_ID}>{$t('report.basicTemplate')}</option>
                 {#each modelProfiles as profile}
-                  <option value={profile.id}>{profile.name || 'AI 增强'}</option>
+                  <option value={profile.id}>{profile.name || $t('ask.aiEnhanced')}</option>
                 {/each}
               </select>
 
               <span class="mx-0.5 h-4 w-px shrink-0 bg-slate-200/60 dark:bg-slate-700/60"></span>
 
               {#if sending}
-                <span class="shrink-0 text-[11px] text-slate-400 dark:text-slate-500">正在整理...</span>
+                <span class="shrink-0 text-[11px] text-slate-400 dark:text-slate-500">{$t('ask.organizing')}</span>
               {:else}
                 <button
                   type="button"
@@ -435,7 +436,7 @@
                   on:click={clearConversation}
                   disabled={!hasConversation}
                 >
-                  清空会话
+                  {$t('ask.clearConversation')}
                 </button>
               {/if}
             </div>
@@ -444,8 +445,8 @@
               class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white transition hover:scale-[1.02] hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white dark:disabled:bg-slate-700 dark:disabled:text-slate-400"
               on:click={() => submitQuestion()}
               disabled={sending || !input.trim()}
-              aria-label={sending ? '正在发送' : '发送消息'}
-              title={sending ? '正在发送' : '发送消息'}
+              aria-label={sending ? $t('ask.sending') : $t('ask.sendMessage')}
+              title={sending ? $t('ask.sending') : $t('ask.sendMessage')}
             >
               {#if sending}
                 <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">

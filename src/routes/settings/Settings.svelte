@@ -9,6 +9,7 @@
   import SettingsAppearance from './components/SettingsAppearance.svelte';
   import SettingsPrivacy from './components/SettingsPrivacy.svelte';
   import SettingsStorage from './components/SettingsStorage.svelte';
+  import { t } from '$lib/i18n/index.js';
   let config = null;
   let loading = true;
   let saving = false;
@@ -25,12 +26,12 @@
   // 当前激活的标签
   let activeTab = 'general';
 
-  const tabs = [
-    { id: 'general', label: '常规', icon: 'general' },
-    { id: 'ai', label: 'AI 模型', icon: 'ai' },
-    { id: 'appearance', label: '外观', icon: 'appearance' },
-    { id: 'privacy', label: '隐私', icon: 'privacy' },
-    { id: 'storage', label: '存储', icon: 'storage' },
+  $: tabs = [
+    { id: 'general', label: $t('settings.tabs.general'), icon: 'general' },
+    { id: 'ai', label: $t('settings.tabs.ai'), icon: 'ai' },
+    { id: 'appearance', label: $t('settings.tabs.appearance'), icon: 'appearance' },
+    { id: 'privacy', label: $t('settings.tabs.privacy'), icon: 'privacy' },
+    { id: 'storage', label: $t('settings.tabs.storage'), icon: 'storage' },
   ];
 
   // 加载配置
@@ -131,7 +132,7 @@
       await invoke('save_config', { config });
       success = true;
       cache.setConfig(config);
-      showToast('设置已保存', 'success');
+      showToast($t('settings.settingsSaved'), 'success');
       
       clearTimeout(successTimer);
       successTimer = setTimeout(() => {
@@ -192,8 +193,8 @@
         </svg>
       </div>
       <div class="page-title-copy">
-        <h2>设置</h2>
-        <p>应用配置与隐私规则</p>
+        <h2>{$t('settings.title')}</h2>
+        <p>{$t('settings.subtitle')}</p>
       </div>
     </div>
 
@@ -205,12 +206,12 @@
     >
       {#if saving}
         <div class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-        保存中...
+        {$t('settings.saving')}
       {:else if success}
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-        已保存
+        {$t('settings.saved')}
       {:else}
-        保存设置
+        {$t('settings.save')}
       {/if}
     </button>
   </div>
@@ -222,10 +223,10 @@
   {:else if error}
     <div class="page-banner-error mb-6">
       <div>
-        <p class="font-semibold">加载配置失败</p>
+        <p class="font-semibold">{$t('settings.loadFailed')}</p>
         <p class="text-sm mt-1">{error}</p>
       </div>
-      <button on:click={loadConfig} class="page-action-brand">重试</button>
+      <button on:click={loadConfig} class="page-action-brand">{$t('overview.retry')}</button>
     </div>
   {:else if config}
     <div class="w-full">
@@ -261,8 +262,8 @@
         <SettingsGeneral bind:config on:change={() => {}} />
       {:else if activeTab === 'ai'}
         <div class="page-card">
-          <h3 class="settings-card-title">模型连接</h3>
-          <p class="settings-card-desc">配置当前默认模型，并管理多个可供助手页切换的连接</p>
+          <h3 class="settings-card-title">{$t('settings.ai.title')}</h3>
+          <p class="settings-card-desc">{$t('settings.ai.desc')}</p>
           <SettingsAI bind:config {providers} on:change={() => {}} />
         </div>
       {:else if activeTab === 'appearance'}

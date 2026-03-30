@@ -2951,14 +2951,30 @@ pub fn categorize_app_with_rules(
 
 /// 获取分类的中文名称
 pub fn get_category_name(category: &str) -> &str {
-    match category {
-        "development" => "开发工具",
-        "browser" => "浏览器",
-        "communication" => "通讯协作",
-        "office" => "办公软件",
-        "design" => "设计工具",
-        "entertainment" => "娱乐",
-        _ => "其他",
+    get_category_name_locale(category, "zh-CN")
+}
+
+pub fn get_category_name_locale<'a>(category: &str, locale: &str) -> &'a str {
+    if crate::i18n::is_en(locale) {
+        match category {
+            "development" => "Development",
+            "browser" => "Browser",
+            "communication" => "Communication",
+            "office" => "Office",
+            "design" => "Design",
+            "entertainment" => "Entertainment",
+            _ => "Other",
+        }
+    } else {
+        match category {
+            "development" => "开发工具",
+            "browser" => "浏览器",
+            "communication" => "通讯协作",
+            "office" => "办公软件",
+            "design" => "设计工具",
+            "entertainment" => "娱乐",
+            _ => "其他",
+        }
     }
 }
 

@@ -10,6 +10,7 @@
   const unsubIcons = appIconStore.subscribe(v => appIcons = v);
 
   import { onDestroy } from 'svelte';
+  import { t } from '$lib/i18n/index.js';
   onDestroy(() => unsubIcons());
 
   // 展开/收起状态
@@ -82,7 +83,7 @@
       class="w-full text-center text-xs text-slate-400 hover:text-primary-500 dark:text-slate-500 dark:hover:text-primary-400 py-1 transition-colors"
       on:click={() => expanded = !expanded}
     >
-      {expanded ? '收起' : `展开全部 (${data.length} 个应用)`}
+      {expanded ? $t('overview.collapse') : $t('overview.expandApps', { count: data.length })}
     </button>
   {/if}
 </div>

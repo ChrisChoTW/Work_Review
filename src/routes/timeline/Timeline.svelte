@@ -10,6 +10,7 @@
   import { resolveAppIconSrc } from '../../lib/utils/appVisuals.js';
   import { formatBrowserUrlForDisplay } from '../../lib/utils/browserUrl.js';
   import { prepareTimelineActivities, upsertTimelineActivity } from './timelineData.js';
+  import { t, locale } from '$lib/i18n/index.js';
 
   // 获取本地日期（避免 UTC 时区问题）
   function getLocalDateString() {
@@ -62,17 +63,17 @@
 
   const unsubIcons = appIconStore.subscribe(v => appIcons = v);
 
-  // 分类名称和颜色
-  const categoryInfo = {
-    development: { name: '开发工具', color: 'blue', icon: '⚡' },
-    browser: { name: '浏览器', color: 'green', icon: '🌐' },
-    communication: { name: '通讯协作', color: 'yellow', icon: '💬' },
-    office: { name: '办公软件', color: 'purple', icon: '📝' },
-    design: { name: '设计工具', color: 'pink', icon: '🎨' },
-    entertainment: { name: '娱乐摸鱼', color: 'red', icon: '🎮' },
-    other: { name: '其他', color: 'gray', icon: '📁' },
+  // 分类名称和颜色（reactive，语系切换时自动更新）
+  $: categoryInfo = {
+    development: { name: $t('category.development'), color: 'blue', icon: '⚡' },
+    browser: { name: $t('category.browser'), color: 'green', icon: '🌐' },
+    communication: { name: $t('category.communication'), color: 'yellow', icon: '💬' },
+    office: { name: $t('category.office'), color: 'purple', icon: '📝' },
+    design: { name: $t('category.design'), color: 'pink', icon: '🎨' },
+    entertainment: { name: $t('category.entertainment'), color: 'red', icon: '🎮' },
+    other: { name: $t('category.other'), color: 'gray', icon: '📁' },
   };
-  const categoryOptions = Object.entries(categoryInfo).map(([value, info]) => ({
+  $: categoryOptions = Object.entries(categoryInfo).map(([value, info]) => ({
     value,
     label: info.name,
   }));
@@ -80,7 +81,7 @@
 
   // 格式化时间
   function formatTime(timestamp) {
-    return new Date(timestamp * 1000).toLocaleTimeString('zh-CN', {
+    return new Date(timestamp * 1000).toLocaleTimeString($locale, {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
@@ -89,15 +90,15 @@
 
   // 格式化时长
   function formatDuration(seconds) {
-    if (seconds < 60) return `${seconds}秒`;
+    if (seconds < 60) return $t('time.secondsOnly', { seconds });
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
     if (minutes < 60) {
-      return secs > 0 ? `${minutes}分${secs}秒` : `${minutes}分钟`;
+      return secs > 0 ? $t('time.minutesSeconds', { minutes, seconds: secs }) : $t('time.minutesOnly', { minutes });
     }
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    return mins > 0 ? `${hours}小时${mins}分` : `${hours}小时`;
+    return mins > 0 ? $t('time.hoursMinutes', { hours, minutes: mins }) : $t('time.hoursOnly', { hours });
   }
 
   function getTimelineIconSrc(activity) {
@@ -147,7 +148,7 @@
     }
     
     // 完全无信息
-    return `${appName} 使用中`;
+    return $t('timeline.inUse', { app: appName });
   }
 
   // 加载缩略图（列表用，400px），使用 LRU 缓存控制内存
@@ -321,10 +322,10 @@
 
     const targetInfo = categoryInfo[nextCategory] || categoryInfo.other;
     const confirmed = await confirm({
-      title: '修改应用默认分类',
-      message: `将${activity.app_name}的默认分类改为“${targetInfo.name}”，并同步更新该应用的历史记录。是否继续？`,
-      confirmText: '确认修改',
-      cancelText: '取消',
+      title: $t('timeline.changeCategory'),
+      message: $t('timeline.changeCategoryConfirm', { appName: activity.app_name, category: targetInfo.name }),
+      confirmText: $t('timeline.confirmChange'),
+      cancelText: $t('settings.privacy.cancel'),
       tone: 'warning',
     });
     if (!confirmed) return;
@@ -349,12 +350,12 @@
       }
 
       showToast(
-        `已将 ${activity.app_name} 设为“${targetInfo.name}”，并同步 ${updatedCount} 条历史记录`,
+        $t('timeline.categoryChanged', { appName: activity.app_name, category: targetInfo.name, count: updatedCount }),
         'success'
       );
     } catch (e) {
       console.error('修改应用默认分类失败:', e);
-      showToast(`修改 ${activity.app_name} 的默认分类失败: ${e}`, 'error');
+      showToast(`${$t('timeline.changeCategoryFailed', { appName: activity.app_name })}: ${e}`, 'error');
     } finally {
       categorySaving = false;
     }
@@ -409,9 +410,9 @@
         </svg>
       </div>
       <div class="page-title-copy">
-        <h2>时间线</h2>
+        <h2>{$t('timeline.title')}</h2>
         <p>
-        活动记录
+        {$t('timeline.activityLog')}
         {#if isToday}
           <span class="ml-1.5 inline-flex items-center gap-1.5">
             <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
@@ -427,7 +428,7 @@
         bind:value={selectedDate}
         class="page-control-input"
       />
-      <button class="page-control-btn-icon" on:click={loadTimeline} title="刷新">
+      <button class="page-control-btn-icon" on:click={loadTimeline} title={$t('timeline.refresh')}>
         <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
         </svg>
@@ -442,23 +443,23 @@
   {:else if error}
     <div class="page-banner-error">
       <div>
-        <p class="font-semibold">加载时间线失败</p>
+        <p class="font-semibold">{$t('timeline.loadFailed')}</p>
         <p class="text-sm mt-1">{error}</p>
       </div>
-      <button class="page-action-brand" on:click={loadTimeline}>重试</button>
+      <button class="page-action-brand" on:click={loadTimeline}>{$t('overview.retry')}</button>
     </div>
   {:else if activities.length === 0}
     <div class="empty-state-lg">
       <div class="empty-state-icon">
         <span class="text-2xl">📝</span>
       </div>
-      <p class="empty-state-copy">该日期暂无活动记录</p>
+      <p class="empty-state-copy">{$t('timeline.noActivity')}</p>
     </div>
   {:else}
     <!-- 统计摘要 -->
     <div class="mb-4 flex items-center justify-between">
       <div class="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
-        <span>{isToday ? '今日' : selectedDate} {activities.length} 条记录</span>
+        <span>{isToday ? $t('timeline.today') : selectedDate} {activities.length} {$t('timeline.records')}</span>
         <span class="text-slate-300 dark:text-slate-600">|</span>
         <span>00:00 - {formatTime(activities[0].timestamp)}</span>
       </div>
@@ -471,7 +472,7 @@
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
-          时段摘要
+          {$t('timeline.hourlySummary')}
           {#if hourlySummaries.length > 0}
             <span class="px-1.5 py-0.5 text-xs bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-full">{hourlySummaries.length}</span>
           {/if}
@@ -548,18 +549,18 @@
           >
             {#if loadingMore}
               <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-500"></div>
-              加载中...
+              {$t('timeline.loading')}
             {:else}
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
-              加载更多
+              {$t('timeline.loadMore')}
             {/if}
           </button>
         </div>
       {:else if activities.length > 0}
         <div class="p-4 text-center text-xs text-slate-400 border-t border-slate-200 dark:border-slate-700">
-          没有更多记录了
+          {$t('timeline.noMore')}
         </div>
       {/if}
     </div>
@@ -618,13 +619,13 @@
         <div>
           <div class="flex items-center justify-between gap-3">
             <div>
-              <span class="text-sm font-medium text-slate-500 dark:text-slate-400">应用默认分类</span>
+              <span class="text-sm font-medium text-slate-500 dark:text-slate-400">{$t('timeline.appDefaultCategory')}</span>
               <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                修改后会同步更新该应用的历史记录
+                {$t('timeline.categoryChangeHint')}
               </p>
             </div>
             {#if categorySaving}
-              <span class="text-xs text-slate-400">保存中...</span>
+              <span class="text-xs text-slate-400">{$t('settings.saving')}</span>
             {/if}
           </div>
           <div class="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
@@ -645,7 +646,7 @@
 
         <!-- 截图预览 -->
         <div>
-          <span class="text-sm font-medium text-slate-500 dark:text-slate-400">屏幕截图</span>
+          <span class="text-sm font-medium text-slate-500 dark:text-slate-400">{$t('timeline.screenshot')}</span>
           <!-- 容器居中对齐，避免图片尺寸小时产生大面积空白 -->
           <div class="mt-2 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-700 flex items-center justify-center min-h-[120px]">
             {#if selectedActivity.thumbnailLoading}
@@ -654,33 +655,33 @@
               </div>
             {:else if selectedActivity.thumbnail}
               <!-- max-h 限制高度防止超高图片撑开弹窗，object-contain 保持比例居中 -->
-              <img src={selectedActivity.thumbnail} alt="屏幕截图" class="max-w-full max-h-96 object-contain" />
+              <img src={selectedActivity.thumbnail} alt={$t('timeline.screenshot')} class="max-w-full max-h-96 object-contain" />
             {:else}
               <div class="py-12 flex items-center justify-center text-slate-400">
-                <span>截图加载失败</span>
+                <span>{$t('timeline.screenshotFailed')}</span>
               </div>
             {/if}
           </div>
         </div>
 
         <div>
-          <span class="text-sm font-medium text-slate-500 dark:text-slate-400">窗口标题</span>
+          <span class="text-sm font-medium text-slate-500 dark:text-slate-400">{$t('timeline.windowTitle')}</span>
           <!-- 字号略大，提升可读性 -->
-          <p class="text-base text-slate-800 dark:text-white mt-1 break-all leading-relaxed">{selectedActivity.window_title || '无标题'}</p>
+          <p class="text-base text-slate-800 dark:text-white mt-1 break-all leading-relaxed">{selectedActivity.window_title || $t('timeline.noTitle')}</p>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <span class="text-sm font-medium text-slate-500 dark:text-slate-400">记录时间</span>
+            <span class="text-sm font-medium text-slate-500 dark:text-slate-400">{$t('timeline.recordTime')}</span>
             <p class="text-base text-slate-800 dark:text-white mt-1 font-mono">{formatTime(selectedActivity.timestamp)}</p>
           </div>
           <div>
-            <span class="text-sm font-medium text-slate-500 dark:text-slate-400">持续时长</span>
+            <span class="text-sm font-medium text-slate-500 dark:text-slate-400">{$t('timeline.duration')}</span>
             <p class="text-base text-slate-800 dark:text-white mt-1">{formatDuration(selectedActivity.duration)}</p>
           </div>
         </div>
         {#if selectedActivity.browser_url}
           <div>
-            <span class="text-sm font-medium text-slate-500 dark:text-slate-400">访问网址</span>
+            <span class="text-sm font-medium text-slate-500 dark:text-slate-400">{$t('timeline.visitUrl')}</span>
             <button 
               on:click={() => openUrl(selectedActivity.browser_url)}
               class="text-primary-600 dark:text-primary-400 mt-1 text-sm hover:underline break-all block text-left cursor-pointer"

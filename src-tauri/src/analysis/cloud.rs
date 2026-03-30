@@ -1,4 +1,5 @@
-use crate::analysis::{append_custom_prompt, generate_stats_summary, Analyzer, GeneratedReport};
+use crate::analysis::{append_custom_prompt_locale, generate_stats_summary_locale, Analyzer, GeneratedReport};
+use crate::i18n;
 use crate::database::{Activity, DailyStats};
 use crate::error::{AppError, Result};
 use async_trait::async_trait;
@@ -14,11 +15,12 @@ pub struct CloudAnalyzer {
     api_key: String,
     model: String,
     custom_prompt: String,
+    locale: String,
     client: Client,
 }
 
 impl CloudAnalyzer {
-    pub fn new(api_key: &str, model: &str, custom_prompt: &str) -> Self {
+    pub fn new(api_key: &str, model: &str, custom_prompt: &str, locale: &str) -> Self {
         // 创建带超时配置的 HTTP 客户端
         let client = Client::builder()
             .timeout(Duration::from_secs(60)) // OpenAI API 超时设置为60秒
@@ -30,6 +32,7 @@ impl CloudAnalyzer {
             api_key: api_key.to_string(),
             model: model.to_string(),
             custom_prompt: custom_prompt.to_string(),
+            locale: locale.to_string(),
             client,
         }
     }
@@ -92,7 +95,7 @@ impl CloudAnalyzer {
         stats: &DailyStats,
         insights: &[String],
     ) -> Result<String> {
-        let stats_summary = generate_stats_summary(stats);
+        let stats_summary = generate_stats_summary_locale(stats, &self.locale);
 
         let insights_text = insights
             .iter()
@@ -102,7 +105,7 @@ impl CloudAnalyzer {
             .join("\n");
 
         // 让 AI 自由发挥，不设置固定模板格式
-        let prompt = append_custom_prompt(
+        let prompt = append_custom_prompt_locale(
             format!(
             r#"以下是一位打工人今天的工作数据：
 
@@ -111,18 +114,11 @@ impl CloudAnalyzer {
 ### 从屏幕截图中识别到的工作内容
 {insights_text}
 
-请根据以上数据，用你自己的风格生成一份有价值的工作日报。
-
-你可以自由发挥，比如：
-- 用诙谐幽默的方式点评今天的工作
-- 深入分析时间的使用情况
-- 发现一些有趣的工作模式
-- 给出实用的效率提升建议
-- 或者任何你认为有价值的洞察
-
-用 Markdown 格式书写，不需要遵循固定的模板，让这份报告既专业又有趣。"#
+{}"#,
+            i18n::ai_report_instruction(&self.locale)
         ),
             &self.custom_prompt,
+            &self.locale,
         );
 
         let response = self.client
@@ -133,7 +129,7 @@ impl CloudAnalyzer {
                 "messages": [
                     {
                         "role": "system",
-                        "content": "你是一个充满人情味的工作日报助手，专门帮助打工人总结工作。你的风格是专业但不死板，能用轻松有趣的方式传递有价值的信息。"
+                        "content": i18n::ai_system_prompt(&self.locale)
                     },
                     {
                         "role": "user",
@@ -157,7 +153,7 @@ impl CloudAnalyzer {
             .unwrap_or("")
             .to_string();
 
-        Ok(format!("# 📈 工作日报 - {date}\n\n{report}"))
+        Ok(format!("{}\n\n{report}", i18n::daily_report_title_emoji(&self.locale, date)))
     }
 }
 

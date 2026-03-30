@@ -2,6 +2,7 @@
   import { createEventDispatcher, onMount } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import { enable as enableAutostart, disable as disableAutostart, isEnabled as isAutostartEnabled } from '@tauri-apps/plugin-autostart';
+  import { t } from '$lib/i18n/index.js';
 
   export let config;
 
@@ -45,7 +46,7 @@
     if (diff <= 0) return '—';
     const h = Math.floor(diff / 60);
     const m = diff % 60;
-    return m > 0 ? `${h}小时${m}分钟` : `${h}小时`;
+    return m > 0 ? $t('time.hoursMinutes', { hours: h, minutes: m }) : $t('time.hoursOnly', { hours: h });
   })();
 
   function updateStart(h, m) {
@@ -100,21 +101,21 @@
 
 <!-- 基本设置 -->
 <div class="settings-card">
-  <h3 class="settings-card-title">基本设置</h3>
-  <p class="settings-card-desc">工作时间和应用行为</p>
+  <h3 class="settings-card-title">{$t('settings.general.title')}</h3>
+  <p class="settings-card-desc">{$t('settings.general.desc')}</p>
 
   <div class="settings-section">
     <!-- 工作时间 -->
     <div class="settings-block">
       <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span class="settings-text">工作时间</span>
-        <span class="settings-muted">共 {workHours}</span>
+        <span class="settings-text">{$t('settings.general.workTime')}</span>
+        <span class="settings-muted">{$t('settings.general.totalHours', { hours: workHours })}</span>
       </div>
 
       <div class="flex items-center gap-3">
         <!-- 开始时间 -->
         <div class="control-inline">
-          <span class="settings-subtle">从</span>
+          <span class="settings-subtle">{$t('settings.general.from')}</span>
           <input
             type="time"
             value={startTimeDisplay}
@@ -130,7 +131,7 @@
 
         <!-- 结束时间 -->
         <div class="control-inline">
-          <span class="settings-subtle">到</span>
+          <span class="settings-subtle">{$t('settings.general.to')}</span>
           <input
             type="time"
             value={endTimeDisplay}
@@ -142,7 +143,7 @@
           />
         </div>
       </div>
-      <p class="settings-note">此时间段内的活动将被计入工作时长统计</p>
+      <p class="settings-note">{$t('settings.general.workTimeHint')}</p>
     </div>
 
     <hr class="border-slate-200 dark:border-slate-700" />
@@ -150,8 +151,8 @@
     <!-- 开机自启动 -->
     <div class="flex items-center justify-between">
       <div>
-        <div class="settings-text">开机自启动</div>
-        <div class="settings-muted mt-0.5">系统启动时自动运行 Work Review</div>
+        <div class="settings-text">{$t('settings.general.autoStart')}</div>
+        <div class="settings-muted mt-0.5">{$t('settings.general.autoStartDesc')}</div>
       </div>
       <button
         on:click={toggleAutoStart}
@@ -166,8 +167,8 @@
     <!-- Dock 图标 -->
     <div class="flex items-center justify-between">
       <div>
-        <div class="settings-text">隐藏 Dock 图标</div>
-        <div class="settings-muted mt-0.5">隐藏后仅通过系统托盘访问应用</div>
+        <div class="settings-text">{$t('settings.general.hideDock')}</div>
+        <div class="settings-muted mt-0.5">{$t('settings.general.hideDockDesc')}</div>
       </div>
       <button
         on:click={toggleDockIcon}
@@ -181,8 +182,8 @@
 
     <div class="flex items-center justify-between">
       <div>
-        <div class="settings-text">轻量模式</div>
-        <div class="settings-muted mt-0.5">关闭主界面后释放 Webview，仅保留后台记录与托盘；重新打开主界面时会按需重建</div>
+        <div class="settings-text">{$t('settings.general.lightweightMode')}</div>
+        <div class="settings-muted mt-0.5">{$t('settings.general.lightweightModeDesc')}</div>
       </div>
       <button
         on:click={toggleLightweightMode}

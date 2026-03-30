@@ -12,7 +12,7 @@
   export let state = {
     mode: 'idle',
     appName: 'Work Review',
-    contextLabel: '待命中',
+    contextLabel: 'Standby',
     hint: '',
     isIdle: true,
     isGeneratingReport: false,

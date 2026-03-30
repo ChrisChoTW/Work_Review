@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import Chart from 'chart.js/auto';
+  import { t } from '$lib/i18n/index.js';
 
   export let data = [];
   export let total = 0;
@@ -10,13 +11,13 @@
 
   // 分类名称映射
   const categoryNames = {
-    development: '开发工具',
-    browser: '浏览器',
-    communication: '通讯协作',
-    office: '办公软件',
-    design: '设计工具',
-    entertainment: '娱乐',
-    other: '其他',
+    development: $t('category.development'),
+    browser: $t('category.browser'),
+    communication: $t('category.communication'),
+    office: $t('category.office'),
+    design: $t('category.design'),
+    entertainment: $t('category.entertainment'),
+    other: $t('category.other'),
   };
 
   // 分类颜色

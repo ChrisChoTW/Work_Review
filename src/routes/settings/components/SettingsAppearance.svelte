@@ -2,6 +2,7 @@
   import { createEventDispatcher, onDestroy, onMount } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import { showToast } from '$lib/stores/toast.js';
+  import { t, locale, setLocale, SUPPORTED_LOCALES } from '$lib/i18n/index.js';
   import {
     AVATAR_OPACITY_DEFAULT,
     AVATAR_SCALE_DEFAULT,
@@ -31,7 +32,7 @@
   let bgUploading = false;
   let appearanceDestroyed = false;
 
-  const blurLabels = ['清晰', '轻微模糊', '中等模糊'];
+  $: blurLabels = $t('settings.appearance.blurLabels');
   $: avatarToggleUi = getAvatarToggleUiState(Boolean(config.avatar_enabled), avatarSaving);
   $: avatarScale = clampAvatarScale(config.avatar_scale ?? AVATAR_SCALE_DEFAULT);
   $: avatarScaleLabel = formatAvatarScaleLabel(avatarScale);
@@ -64,10 +65,10 @@
       });
 
       dispatch('change', config);
-      showToast(getAvatarToggleToast(enabled), enabled ? 'success' : 'info');
+      showToast(getAvatarToggleToast(enabled, $t), enabled ? 'success' : 'info');
     } catch (e) {
       console.error('设置桌宠失败:', e);
-      showToast(`桌宠设置失败: ${e}`, 'error');
+      showToast(`${$t('settings.appearance.avatarFailed')}: ${e}`, 'error');
     } finally {
       avatarSaving = false;
     }
@@ -86,7 +87,7 @@
         dispatch('change', config);
       } catch (e) {
         console.error('保存桌宠缩放失败:', e);
-        showToast(`桌宠缩放保存失败: ${e}`, 'error');
+        showToast(`${$t('settings.appearance.avatarScaleFailed')}: ${e}`, 'error');
       } finally {
         avatarScaleSaving = false;
       }
@@ -117,7 +118,7 @@
         dispatch('change', config);
       } catch (e) {
         console.error('保存桌宠透明度失败:', e);
-        showToast(`桌宠透明度保存失败: ${e}`, 'error');
+        showToast(`${$t('settings.appearance.avatarOpacityFailed')}: ${e}`, 'error');
       } finally {
         avatarOpacitySaving = false;
       }
@@ -136,7 +137,7 @@
     if (!file) return;
     if (!file.type.startsWith('image/')) return;
     if (file.size > 10 * 1024 * 1024) {
-      showToast('图片大小不能超过 10MB', 'warning');
+      showToast($t('settings.appearance.fileTooLarge'), 'warning');
       return;
     }
 
@@ -148,7 +149,7 @@
       try {
         const b64Data = typeof reader.result === 'string' ? reader.result.split(',')[1] : null;
         if (!b64Data) {
-          throw new Error('背景图读取失败');
+          throw new Error($t('settings.appearance.readFailed'));
         }
         await invoke('save_background_image', { data: b64Data });
         if (appearanceDestroyed) return;
@@ -161,7 +162,7 @@
       } catch (e) {
         if (appearanceDestroyed) return;
         console.error('上传背景图失败:', e);
-        showToast('上传失败: ' + e, 'error');
+        showToast($t('settings.appearance.uploadFailed') + ': ' + e, 'error');
       } finally {
         if (!appearanceDestroyed) {
           bgUploading = false;
@@ -179,7 +180,7 @@
       dispatchBgEvent(null);
     } catch (e) {
       console.error('清除背景图失败:', e);
-      showToast('清除背景图失败: ' + e, 'error');
+      showToast($t('settings.appearance.clearFailed') + ': ' + e, 'error');
     }
   }
 
@@ -206,18 +207,39 @@
   }
 </script>
 
+<!-- 语言设置 -->
+<div class="settings-card">
+  <h3 class="settings-card-title">Language / 语言</h3>
+  <div class="settings-section">
+    <div class="flex gap-2">
+      {#each SUPPORTED_LOCALES as loc}
+        <button
+          on:click={() => {
+            setLocale(loc.code);
+            config.locale = loc.code;
+            dispatch('change', config);
+          }}
+          class="segment-btn {$locale === loc.code ? 'settings-segment-active' : 'settings-segment-base'}"
+        >
+          {loc.label}
+        </button>
+      {/each}
+    </div>
+  </div>
+</div>
+
 <div class="settings-card">
   <div class="settings-section">
     <div class="flex items-center justify-between gap-4">
       <div>
         <div class="flex items-center gap-2">
-          <div class="settings-text">桌面化身</div>
+          <div class="settings-text">{$t("settings.appearance.avatar")}</div>
           <span class="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-700 dark:border-amber-400/30 dark:bg-amber-500/10 dark:text-amber-200">
             Beta
           </span>
         </div>
-        <div class="settings-muted mt-0.5">显示独立桌宠窗口，用轻量状态反馈当前工作节奏</div>
-        <div class="settings-muted mt-1 text-[12px]">实验功能，当前仍在持续优化显示细节、状态反馈与交互体验</div>
+        <div class="settings-muted mt-0.5">{$t("settings.appearance.avatarDesc")}</div>
+        <div class="settings-muted mt-1 text-[12px]">{$t("settings.appearance.avatarExperimental")}</div>
       </div>
       <button
         type="button"
@@ -236,13 +258,13 @@
     <div class="settings-block pt-1">
       <div class="flex items-center justify-between gap-3">
         <div>
-          <div class="settings-text">桌宠大小</div>
-          <div class="settings-muted mt-0.5">连续缩放桌宠尺寸，调整后会立即同步到桌面窗口</div>
+          <div class="settings-text">{$t("settings.appearance.avatarSize")}</div>
+          <div class="settings-muted mt-0.5">{$t("settings.appearance.avatarSizeDesc")}</div>
         </div>
         <div class="text-sm font-semibold text-slate-700 dark:text-slate-200">
           {avatarScaleLabel}
           {#if avatarScaleSaving}
-            <span class="ml-2 text-xs font-normal text-slate-400 dark:text-slate-500">同步中</span>
+            <span class="ml-2 text-xs font-normal text-slate-400 dark:text-slate-500">{$t("settings.appearance.syncing")}</span>
           {/if}
         </div>
       </div>
@@ -255,25 +277,25 @@
         value={avatarScale}
         on:input={handleAvatarScaleInput}
         class="mt-3 w-full accent-primary-500"
-        aria-label="调整桌宠大小"
+        aria-label={$t("settings.appearance.avatarSizeLabel")}
       />
       <div class="mt-2 flex justify-between text-[11px] text-slate-400 dark:text-slate-500">
-        <span>更小</span>
-        <span>默认 90%</span>
-        <span>更大</span>
+        <span>{$t("settings.appearance.smaller")}</span>
+        <span>90%</span>
+        <span>{$t("settings.appearance.bigger")}</span>
       </div>
     </div>
 
     <div class="settings-block pt-1">
       <div class="flex items-center justify-between gap-3">
         <div>
-          <div class="settings-text">桌宠透明度</div>
-          <div class="settings-muted mt-0.5">仅作用于猫体本身，不影响背景图片透明度</div>
+          <div class="settings-text">{$t("settings.appearance.avatarOpacity")}</div>
+          <div class="settings-muted mt-0.5">{$t("settings.appearance.avatarOpacityDesc")}</div>
         </div>
         <div class="text-sm font-semibold text-slate-700 dark:text-slate-200">
           {avatarOpacityLabel}
           {#if avatarOpacitySaving}
-            <span class="ml-2 text-xs font-normal text-slate-400 dark:text-slate-500">同步中</span>
+            <span class="ml-2 text-xs font-normal text-slate-400 dark:text-slate-500">{$t("settings.appearance.syncing")}</span>
           {/if}
         </div>
       </div>
@@ -286,12 +308,12 @@
         value={avatarOpacity}
         on:input={handleAvatarOpacityInput}
         class="mt-3 w-full accent-primary-500"
-        aria-label="调整桌宠透明度"
+        aria-label={$t("settings.appearance.avatarOpacity")}
       />
       <div class="mt-2 flex justify-between text-[11px] text-slate-400 dark:text-slate-500">
-        <span>更透</span>
-        <span>默认 82%</span>
-        <span>更实</span>
+        <span>{$t("settings.appearance.transparent")}</span>
+        <span>82%</span>
+        <span>{$t("settings.appearance.opaque")}</span>
       </div>
     </div>
   </div>
@@ -299,19 +321,19 @@
 
 <!-- 背景图片 -->
 <div class="settings-card">
-  <h3 class="settings-card-title">背景图片</h3>
-  <p class="settings-card-desc">上传图片作为应用背景底纹</p>
+  <h3 class="settings-card-title">{$t('settings.appearance.backgroundImage')}</h3>
+  <p class="settings-card-desc">{$t('settings.appearance.uploadHint')}</p>
 
   <div class="settings-section">
     <!-- 预览 + 上传 -->
     <div class="flex items-start gap-4">
       {#if bgPreview}
         <div class="w-32 h-20 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 flex-shrink-0">
-          <img src={bgPreview} alt="背景预览" class="w-full h-full object-cover" />
+          <img src={bgPreview} alt="background preview" class="w-full h-full object-cover" />
         </div>
       {:else}
         <div class="w-32 h-20 rounded-lg border-2 border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-center flex-shrink-0">
-          <span class="settings-subtle">无背景</span>
+          <span class="settings-subtle">{$t('settings.appearance.noBackground')}</span>
         </div>
       {/if}
 
@@ -319,10 +341,10 @@
         <label class="settings-action-secondary cursor-pointer">
           {#if bgUploading}
             <div class="animate-spin rounded-full h-3 w-3 border-2 border-slate-500 border-t-transparent"></div>
-            处理中...
+            {$t('settings.appearance.processing')}
           {:else}
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-            选择图片
+            {$t('settings.appearance.selectImage')}
           {/if}
           <input type="file" accept="image/*" class="hidden" on:change={handleBgFileSelect} disabled={bgUploading} />
         </label>
@@ -331,10 +353,10 @@
             on:click={clearBg}
             class="settings-link-danger"
           >
-            清除背景
+            {$t('settings.appearance.clearBackground')}
           </button>
         {/if}
-        <p class="settings-muted">支持 JPG/PNG，建议不超过 10MB</p>
+        <p class="settings-muted">{$t('settings.appearance.fileSizeLimit')}</p>
       </div>
     </div>
 
@@ -344,7 +366,7 @@
       <!-- 显示强度 -->
       <div class="settings-block">
         <div class="flex items-center justify-between">
-          <span class="settings-text">显示强度</span>
+          <span class="settings-text">{$t('settings.appearance.displayStrength')}</span>
           <span class="settings-value">{Math.round((config.background_opacity ?? 0.25) * 100)}%</span>
         </div>
         <input
@@ -357,15 +379,15 @@
           class="range-input"
         />
         <div class="flex justify-between text-[10px] settings-subtle">
-          <span>淡雅</span>
-          <span>浓郁</span>
+          <span>{$t('settings.appearance.light')}</span>
+          <span>{$t('settings.appearance.strong')}</span>
         </div>
       </div>
 
       <!-- 模糊度 -->
       <div class="settings-block">
         <div class="flex items-center justify-between">
-          <span class="settings-text">模糊程度</span>
+          <span class="settings-text">{$t('settings.appearance.blurLevel')}</span>
           <span class="settings-muted">{blurLabels[config.background_blur ?? 1]}</span>
         </div>
         <div class="flex gap-2">

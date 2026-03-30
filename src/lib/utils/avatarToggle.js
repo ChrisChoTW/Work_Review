@@ -5,10 +5,17 @@ export const AVATAR_OPACITY_MIN = 0.45;
 export const AVATAR_OPACITY_MAX = 1;
 export const AVATAR_OPACITY_DEFAULT = 0.82;
 
-export function getAvatarToggleToast(enabled) {
+/**
+ * @param {boolean} enabled
+ * @param {function} t - i18n translate function
+ */
+export function getAvatarToggleToast(enabled, t) {
+  if (t) {
+    return enabled ? t('settings.appearance.avatarShown') : t('settings.appearance.avatarHidden');
+  }
   return enabled
-    ? '桌宠已显示，可在屏幕右下角附近查看'
-    : '桌宠已隐藏';
+    ? 'Avatar shown at bottom-right of screen'
+    : 'Avatar hidden';
 }
 
 export function getAvatarToggleUiState(enabled, saving = false) {
@@ -18,7 +25,7 @@ export function getAvatarToggleUiState(enabled, saving = false) {
       : 'bg-slate-300 hover:bg-slate-400 dark:bg-slate-600 dark:hover:bg-slate-500',
     thumbClass: enabled ? 'translate-x-5' : 'translate-x-0',
     buttonClass: saving ? 'cursor-wait opacity-80' : 'cursor-pointer',
-    ariaLabel: enabled ? '关闭桌面化身' : '开启桌面化身',
+    ariaLabel: enabled ? 'Disable avatar' : 'Enable avatar',
   };
 }
 

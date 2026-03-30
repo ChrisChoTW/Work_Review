@@ -2410,7 +2410,7 @@ pub async fn generate_report(
         crate::avatar_engine::emit_avatar_state(&app, avatar_state);
         crate::avatar_engine::emit_avatar_bubble(
             &app,
-            &crate::avatar_engine::AvatarBubblePayload::info("开始整理日报，稍等我一下。"),
+            &crate::avatar_engine::AvatarBubblePayload::info(crate::i18n::avatar_report_start(&config.locale)),
         );
     }
 
@@ -2422,6 +2422,7 @@ pub async fn generate_report(
         &config.text_model.model,
         config.text_model.api_key.as_deref(),
         &config.daily_report_custom_prompt,
+        &config.locale,
     );
 
     // 生成报告
@@ -2454,9 +2455,9 @@ pub async fn generate_report(
     if let Some(avatar_state) = avatar_finish_state.as_ref() {
         crate::avatar_engine::emit_avatar_state(&app, avatar_state);
         let bubble = if report_result.is_ok() {
-            crate::avatar_engine::AvatarBubblePayload::success("日报整理好了，可以回来看看。")
+            crate::avatar_engine::AvatarBubblePayload::success(crate::i18n::avatar_report_done(&config.locale))
         } else {
-            crate::avatar_engine::AvatarBubblePayload::info("这次日报整理失败了，稍后可以再试。")
+            crate::avatar_engine::AvatarBubblePayload::info(crate::i18n::avatar_report_failed(&config.locale))
         };
         crate::avatar_engine::emit_avatar_bubble(&app, &bubble);
     }

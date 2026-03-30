@@ -17,8 +17,8 @@
   let state = {
     mode: 'idle',
     appName: 'Work Review',
-    contextLabel: '待命中',
-    hint: '准备陪你开始工作',
+    contextLabel: 'Standby',
+    hint: 'Ready to work with you',
     isIdle: true,
     isGeneratingReport: false,
     avatarOpacity: 0.82,

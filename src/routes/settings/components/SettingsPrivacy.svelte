@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
+  import { t } from '$lib/i18n/index.js';
   
   export let config;
   export let runningApps = [];
@@ -18,9 +19,9 @@
 
   // 隐私级别定义 - 使用文字标签避免 emoji 渲染异常
   const privacyLevels = [
-    { value: 'full', label: '完全记录', textClass: 'settings-text-success', chipClass: 'settings-chip-success', activeClass: 'settings-segment-success', desc: '记录截图、活动和 OCR 文字' },
-    { value: 'anonymized', label: '仅统计时长', textClass: 'settings-text-warn', chipClass: 'settings-chip-warn', activeClass: 'settings-segment-warn', desc: '只统计使用时长，不截图不做 OCR' },
-    { value: 'ignored', label: '完全忽略', textClass: 'settings-text-danger', chipClass: 'settings-chip-danger', activeClass: 'settings-segment-danger', desc: '不记录、不统计、不显示' },
+    { value: 'full', label: $t('settings.privacy.fullRecord'), textClass: 'settings-text-success', chipClass: 'settings-chip-success', activeClass: 'settings-segment-success', desc: $t('settings.privacy.fullRecordDesc') },
+    { value: 'anonymized', label: $t('settings.privacy.durationOnly'), textClass: 'settings-text-warn', chipClass: 'settings-chip-warn', activeClass: 'settings-segment-warn', desc: $t('settings.privacy.durationOnlyDesc') },
+    { value: 'ignored', label: $t('settings.privacy.ignore'), textClass: 'settings-text-danger', chipClass: 'settings-chip-danger', activeClass: 'settings-segment-danger', desc: $t('settings.privacy.ignoreDesc') },
   ];
 
   function addAppRule() {
@@ -101,41 +102,41 @@
 </script>
 
 <div class="settings-card mb-5">
-  <h3 class="settings-card-title">隐私设置</h3>
-  <p class="settings-card-desc">所有数据仅存储在本地，不会上传到任何服务器</p>
+  <h3 class="settings-card-title">{$t('settings.privacy.title')}</h3>
+  <p class="settings-card-desc">{$t('settings.privacy.desc')}</p>
   
   <div class="settings-section">
     <!-- 应用规则 -->
     <div>
       <div class="flex items-center justify-between mb-1">
         <span class="settings-text">
-          应用规则
+          {$t('settings.privacy.appRules')}
         </span>
         <button
           on:click={() => showAppInput = !showAppInput}
           class="settings-link-action text-sm"
         >
-          {showAppInput ? '收起' : '+ 添加规则'}
+          {showAppInput ? $t('overview.collapse') : $t('settings.privacy.addRule')}
         </button>
       </div>
-      <p class="settings-muted mb-3">指定应用的记录策略</p>
+      <p class="settings-muted mb-3">{$t('settings.privacy.ruleHint')}</p>
 
       {#if showAppInput}
         <div class="settings-panel mb-3 animate-fadeIn">
           <!-- 应用名称输入 -->
           <div class="settings-field mb-3">
-            <label for="app-name-input" class="settings-label">输入应用名称或点击下方选择</label>
+            <label for="app-name-input" class="settings-label">{$t('settings.privacy.inputAppName')}</label>
             <input
               id="app-name-input"
               type="text"
               bind:value={selectedApp}
               class="control-input"
-              placeholder="如: Chrome, 1Password, 微信"
+              placeholder={$t('settings.privacy.inputPlaceholder')}
             />
           </div>
           <!-- 策略选择：分段按钮 -->
           <div class="settings-field mb-3">
-            <span class="settings-label">记录策略</span>
+            <span class="settings-label">{$t('settings.privacy.recordPolicy')}</span>
             <div class="flex rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600">
               {#each privacyLevels as level}
                 <button
@@ -159,7 +160,7 @@
           <div class="settings-block">
             {#if recentApps.length > 0}
             <div>
-              <span class="settings-subtle block mb-1.5">历史应用</span>
+              <span class="settings-subtle block mb-1.5">{$t('settings.privacy.recentApps')}</span>
               <div class="flex flex-wrap gap-1.5">
                 {#each recentApps.slice(0, 12) as app}
                   <button
@@ -178,7 +179,7 @@
             
             {#if runningApps.length > 0}
             <div>
-              <span class="settings-subtle block mb-1.5">运行中</span>
+              <span class="settings-subtle block mb-1.5">{$t('settings.privacy.runningApps')}</span>
               <div class="flex flex-wrap gap-1.5">
                 {#each runningApps.slice(0, 8) as app}
                   <button
@@ -203,14 +204,14 @@
               on:click={() => { showAppInput = false; selectedApp = ''; }}
               class="settings-action-secondary"
             >
-              取消
+              {$t('settings.privacy.cancel')}
             </button>
             <button
               on:click={addAppRule}
               class="settings-action-primary"
               disabled={!selectedApp}
             >
-              添加规则
+              {$t('settings.privacy.addRuleBtn')}
             </button>
           </div>
         </div>
@@ -223,23 +224,23 @@
             <div class="flex items-center gap-3">
               <span class="text-sm font-medium text-slate-800 dark:text-white">{rule.app_name}</span>
               {#if rule.level === 'full'}
-                <span class="settings-chip-success">完全记录</span>
+                <span class="settings-chip-success">{$t('settings.privacy.fullRecord')}</span>
               {:else if rule.level === 'anonymized'}
-                <span class="settings-chip-warn">仅统计时长</span>
+                <span class="settings-chip-warn">{$t('settings.privacy.durationOnly')}</span>
               {:else}
-                <span class="settings-chip-danger">完全忽略</span>
+                <span class="settings-chip-danger">{$t('settings.privacy.ignore')}</span>
               {/if}
             </div>
             <button
               on:click={() => removeAppRule(i)}
               class="text-xs text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
             >
-              删除
+              {$t('settings.privacy.delete')}
             </button>
           </div>
         {/each}
         {#if config.privacy.app_rules.length === 0}
-          <p class="settings-empty">暂无特殊规则，所有应用默认完全记录</p>
+          <p class="settings-empty">{$t('settings.privacy.noRules')}</p>
         {/if}
       </div>
     </div>
@@ -248,18 +249,18 @@
 
     <!-- 内容过滤（合并敏感词 + 域名黑名单） -->
     <div>
-      <span class="settings-text block mb-1">内容过滤</span>
-      <p class="settings-muted mb-4">OCR 识别到的文字中包含敏感词时，该段文字不会被保存。黑名单域名的浏览活动不会被记录。</p>
+      <span class="settings-text block mb-1">{$t('settings.privacy.contentFilter')}</span>
+      <p class="settings-muted mb-4">{$t('settings.privacy.contentFilterDesc')}</p>
       
       <!-- 敏感词 -->
       <div class="mb-4">
         <div class="flex items-center justify-between mb-2">
-          <span class="settings-label">敏感词</span>
+          <span class="settings-label">{$t('settings.privacy.sensitiveWords')}</span>
           <button
             on:click={() => showKeywordInput = !showKeywordInput}
             class="settings-link-action"
           >
-            {showKeywordInput ? '收起' : '+ 添加'}
+            {showKeywordInput ? $t('overview.collapse') : $t('settings.privacy.addSensitive')}
           </button>
         </div>
         
@@ -269,14 +270,14 @@
               type="text"
               bind:value={newKeyword}
               class="control-input flex-1"
-              placeholder="输入敏感词..."
+              placeholder={$t('settings.privacy.inputSensitive')}
               on:keydown={(e) => e.key === 'Enter' && addKeyword()}
             />
             <button
               on:click={addKeyword}
               class="settings-action-primary"
             >
-              添加
+              {$t('settings.privacy.add')}
             </button>
           </div>
         {/if}
@@ -294,22 +295,22 @@
             </div>
           {/each}
           {#if config.privacy.excluded_keywords.length === 0}
-            <span class="settings-subtle">暂无敏感词</span>
+            <span class="settings-subtle">{$t('settings.privacy.noSensitiveWords')}</span>
           {/if}
         </div>
         <!-- 敏感词匹配说明 -->
-        <p class="settings-note">OCR 识别内容包含该词时自动过滤，不区分大小写</p>
+        <p class="settings-note">{$t('settings.privacy.sensitiveHint')}</p>
       </div>
 
       <!-- 域名黑名单 -->
       <div>
         <div class="flex items-center justify-between mb-2">
-          <span class="settings-label">域名黑名单</span>
+          <span class="settings-label">{$t('settings.privacy.domainBlacklist')}</span>
           <button
             on:click={() => showDomainInput = !showDomainInput}
             class="settings-link-action"
           >
-            {showDomainInput ? '收起' : '+ 添加'}
+            {showDomainInput ? $t('overview.collapse') : $t('settings.privacy.addSensitive')}
           </button>
         </div>
         
@@ -319,14 +320,14 @@
               type="text"
               bind:value={newDomain}
               class="control-input flex-1"
-              placeholder="例如: example.com"
+              placeholder={$t('settings.privacy.domainPlaceholder')}
               on:keydown={(e) => e.key === 'Enter' && addDomain()}
             />
             <button
               on:click={addDomain}
               class="settings-action-primary"
             >
-              添加
+              {$t('settings.privacy.add')}
             </button>
           </div>
         {/if}
@@ -344,11 +345,11 @@
             </div>
           {/each}
           {#if (config.privacy.excluded_domains || []).length === 0}
-            <span class="settings-subtle">暂无黑名单域名</span>
+            <span class="settings-subtle">{$t('settings.privacy.noDomains')}</span>
           {/if}
         </div>
         <!-- 域名黑名单格式说明 -->
-        <p class="settings-note">填写完整域名如 <code class="settings-code">example.com</code>，该域名下所有页面均不会被记录</p>
+        <p class="settings-note">{$t('settings.privacy.domainHint')} <code class="settings-code">example.com</code>{$t('settings.privacy.domainHintSuffix')}</p>
       </div>
     </div>
   </div>

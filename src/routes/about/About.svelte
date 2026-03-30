@@ -4,6 +4,7 @@
   import { open } from '@tauri-apps/plugin-shell';
   import { getVersion } from '@tauri-apps/api/app';
   import { runUpdateFlow } from '$lib/utils/updater.js';
+  import { t } from '$lib/i18n/index.js';
 
   let appVersion = '';
   let dataDir = '';
@@ -41,7 +42,7 @@
     if (isCheckingUpdate) return;
     
     isCheckingUpdate = true;
-    updateStatus = '正在检查更新...';
+    updateStatus = $t('about.checking');
 
     await runUpdateFlow({
       onStatusChange: (status) => {
@@ -77,7 +78,7 @@
       </div>
 
       <p class="mx-auto mt-2 max-w-xl text-sm leading-7 text-slate-600 dark:text-slate-300">
-        记录工作过程、生成时间线和日报，所有核心数据默认仅保存在本机。
+        {$t('about.description2')}
       </p>
 
       <div class="mt-5 flex flex-wrap items-center justify-center gap-2.5">
@@ -87,7 +88,7 @@
         </button>
         <button on:click={openDataDir} class="page-action-secondary min-h-10 px-4 py-2">
           <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-          <span class="leading-none">打开数据目录</span>
+          <span class="leading-none">{$t('about.openDataDir')}</span>
         </button>
         <button
           on:click={checkForUpdates}
@@ -99,24 +100,24 @@
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            <span class="leading-none">检查中...</span>
+            <span class="leading-none">{$t('about.checkingUpdate')}</span>
           {:else}
             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-            <span class="leading-none">检查更新</span>
+            <span class="leading-none">{$t('about.checkUpdate')}</span>
           {/if}
         </button>
       </div>
 
       <div class="mx-auto mt-6 w-full max-w-2xl rounded-2xl border border-slate-200/75 bg-slate-50/72 px-5 py-4 text-center dark:border-slate-700/75 dark:bg-slate-800/34">
         <div class="flex flex-col items-center gap-1">
-          <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">本地数据目录</h3>
+          <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">{$t('about.localDataDir')}</h3>
           <span class="text-[11px] font-medium uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">Local Storage</span>
         </div>
         <p class="mx-auto mt-2 max-w-xl text-sm leading-7 text-slate-600 dark:text-slate-300">
-          本地数据默认保存在这里，可在设置页“存储”中修改位置。
+          {$t('about.localDataHint2')}
         </p>
         <p class="mx-auto mt-3 max-w-xl break-all rounded-xl border border-slate-200/80 bg-white/86 px-4 py-3 font-mono text-[13px] leading-6 text-slate-700 dark:border-slate-700/80 dark:bg-slate-900/52 dark:text-slate-300">
-          {dataDir || '读取中...'}
+          {dataDir || $t('settings.storage.reading')}
         </p>
       </div>
 
@@ -131,7 +132,7 @@
     {#if updateStatus}
       <div class="page-banner-warning justify-center text-center">
         <div>
-          <p class="font-semibold">更新状态</p>
+          <p class="font-semibold">{$t('about.updateStatus')}</p>
           <p class="text-sm mt-1">{updateStatus}</p>
         </div>
       </div>

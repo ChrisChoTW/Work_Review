@@ -18,6 +18,7 @@
   import { cache, getLocalDate } from './lib/stores/cache.js';
   import { preloadAppIcons } from './lib/stores/iconCache.js';
   import { runUpdateFlow } from './lib/utils/updater.js';
+  import { t } from '$lib/i18n/index.js';
 
   const appWindow = getCurrentWebviewWindow();
   const currentWindowLabel = appWindow.label;
@@ -385,7 +386,7 @@
         on:click={minimizeWindow}
         class="w-11 h-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 focus:outline-none transition-colors"
         style="-webkit-app-region: no-drag;"
-        title="最小化"
+        title={$t('window.minimize')}
       >
         <svg class="w-3 h-3 text-slate-600 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14" />
@@ -397,7 +398,7 @@
         on:click={maximizeWindow}
         class="w-11 h-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 focus:outline-none transition-colors"
         style="-webkit-app-region: no-drag;"
-        title="最大化"
+        title={$t('window.maximize')}
       >
         <svg class="w-3 h-3 text-slate-600 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <rect x="4" y="4" width="16" height="16" rx="1" />
@@ -409,7 +410,7 @@
         on:click={closeWindow}
         class="w-11 h-full flex items-center justify-center hover:bg-red-500 hover:text-white focus:outline-none transition-colors group"
         style="-webkit-app-region: no-drag;"
-        title="关闭"
+        title={$t('window.close')}
       >
         <svg class="w-3 h-3 text-slate-600 dark:text-slate-300 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />

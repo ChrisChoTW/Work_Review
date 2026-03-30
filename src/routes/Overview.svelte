@@ -8,6 +8,7 @@
   import { appIconStore, getIconCacheKey, preloadAppIcons } from '../lib/stores/iconCache.js';
   import { resolveAppIconSrc } from '../lib/utils/appVisuals.js';
   import { formatBrowserUrlForDisplay } from '../lib/utils/browserUrl.js';
+  import { t } from '$lib/i18n/index.js';
 
   let stats = null;
   let loading = true;
@@ -47,13 +48,13 @@
   }
 
   function formatDuration(seconds) {
-    if (!seconds || seconds <= 0) return '0秒';
+    if (!seconds || seconds <= 0) return $t('time.zeroSeconds');
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    if (hours > 0) return `${hours}小时${minutes}分钟`;
-    if (minutes > 0) return `${minutes}分钟`;
-    return `${secs}秒`;
+    if (hours > 0) return $t('time.hoursMinutes', { hours, minutes });
+    if (minutes > 0) return $t('time.minutesOnly', { minutes });
+    return $t('time.secondsOnly', { seconds: secs });
   }
 
   function getAppIconSrc(appName, executablePath = null) {
@@ -161,7 +162,7 @@
         </svg>
       </div>
       <div class="page-title-copy">
-        <h2>今日概览</h2>
+        <h2>{$t('overview.title')}</h2>
         <p>
         {new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })}
         <span class="ml-1.5 font-mono text-xs">{currentTime.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
@@ -170,7 +171,7 @@
     </div>
     <div class="page-status-chip text-emerald-600 dark:text-emerald-400">
       <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-      实时
+      {$t('overview.realtime')}
     </div>
   </div>
 
@@ -189,26 +190,26 @@
         </div>
       {/each}
     {:else}
-      <StatsCard title="当天活动总时长" value={formatDuration(stats.total_duration)} icon="duration" color="indigo" />
-      <StatsCard title="当天办公时长" value={formatDuration(stats.work_time_duration || 0)} icon="focus" color="emerald" />
-      <StatsCard title="浏览器" value={formatDuration(stats.browser_duration)} icon="browser" color="blue" />
-      <StatsCard title="应用数" value={stats.app_usage.length} icon="apps" color="amber" />
+      <StatsCard title={$t('overview.totalDuration')} value={formatDuration(stats.total_duration)} icon="duration" color="indigo" />
+      <StatsCard title={$t('overview.workDuration')} value={formatDuration(stats.work_time_duration || 0)} icon="focus" color="emerald" />
+      <StatsCard title={$t('category.browser')} value={formatDuration(stats.browser_duration)} icon="browser" color="blue" />
+      <StatsCard title={$t('overview.appCount')} value={stats.app_usage.length} icon="apps" color="amber" />
     {/if}
   </div>
 
   {#if error}
     <div class="page-banner-error mb-4">
       <div>
-        <p class="font-semibold">加载概览失败</p>
+        <p class="font-semibold">{$t('overview.loadFailed')}</p>
         <p class="text-sm mt-1">{error}</p>
       </div>
-      <button class="page-action-brand" on:click={loadStats}>重试</button>
+      <button class="page-action-brand" on:click={loadStats}>{$t('overview.retry')}</button>
     </div>
   {/if}
 
   <!-- 网站访问：始终渲染，加载中显示骨架，无数据显示占位文字 -->
   <div class="page-card mb-4">
-    <h3 class="page-section-title">网站访问</h3>
+    <h3 class="page-section-title">{$t('overview.websiteVisits')}</h3>
     {#if loading || !stats}
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 animate-pulse">
         {#each [1,2] as _}
@@ -241,9 +242,9 @@
               {formatDuration(browser.duration)}
             </div>
             <div class="flex items-center gap-2 text-xs text-slate-400">
-              <span>{browser.domains.length} 站点</span>
+              <span>{browser.domains.length} {$t('overview.sites')}</span>
               <span>·</span>
-              <span>{browser.domains.reduce((sum, d) => sum + d.urls.length, 0)} 页面</span>
+              <span>{browser.domains.reduce((sum, d) => sum + d.urls.length, 0)} {$t('overview.pages')}</span>
             </div>
           </button>
         {/each}
@@ -253,14 +254,14 @@
         <div class="empty-state-icon !w-12 !h-12 !mb-3 shadow-none">
           <span class="text-xl">🌐</span>
         </div>
-        <p class="empty-state-copy">今日暂无浏览器访问记录</p>
+        <p class="empty-state-copy">{$t('overview.noBrowserRecord')}</p>
       </div>
     {/if}
   </div>
 
   <!-- 应用使用：始终渲染 -->
   <div class="page-card mb-4">
-    <h3 class="page-section-title">应用使用</h3>
+    <h3 class="page-section-title">{$t('overview.appUsage')}</h3>
     {#if loading || !stats}
       <div class="animate-pulse">
         {#each [1,2,3,4] as _}
@@ -278,7 +279,7 @@
         <div class="empty-state-icon !w-12 !h-12 !mb-3 shadow-none">
           <span class="text-xl">📊</span>
         </div>
-        <p class="empty-state-copy">暂无应用统计数据</p>
+        <p class="empty-state-copy">{$t('overview.noAppData')}</p>
       </div>
     {/if}
   </div>
@@ -307,7 +308,7 @@
         <div>
           <h3 class="text-lg font-bold text-slate-800 dark:text-white">{selectedBrowser.browser_name}</h3>
           <p class="text-sm text-slate-500 dark:text-slate-400">
-            {formatDuration(selectedBrowser.duration)} · {selectedBrowser.domains.length} 站点 · {selectedBrowser.domains.reduce((sum, d) => sum + d.urls.length, 0)} 页面
+            {formatDuration(selectedBrowser.duration)} · {selectedBrowser.domains.length} {$t('overview.sites')} · {selectedBrowser.domains.reduce((sum, d) => sum + d.urls.length, 0)} {$t('overview.pages')}
           </p>
         </div>
       </div>
@@ -328,7 +329,7 @@
               <span class="w-2 h-2 rounded-full bg-primary-500"></span>
               <span class="font-medium text-slate-700 dark:text-slate-200">{domain.domain}</span>
               <span class="text-xs text-slate-400 bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">
-                {domain.urls.length} 页
+                {domain.urls.length} {$t('summary.page')}
               </span>
             </div>
             <span class="text-sm font-medium text-slate-600 dark:text-slate-300">{formatDuration(domain.duration)}</span>
@@ -364,10 +365,10 @@
               >
                 {#if expandedDomains.has(domain.domain)}
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
-                  收起
+                  {$t('overview.collapse')}
                 {:else}
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                  展开全部 {domain.urls.length} 条
+                  {$t('overview.expandAll', { count: domain.urls.length })}
                 {/if}
               </button>
             {/if}
@@ -378,7 +379,7 @@
       {#if selectedBrowser.domains.length === 0}
         <div class="text-center py-8 text-slate-400">
           <span class="text-3xl">📭</span>
-          <p class="mt-2">暂无访问记录</p>
+          <p class="mt-2">{$t('overview.noVisitRecord')}</p>
         </div>
       {/if}
     </div>

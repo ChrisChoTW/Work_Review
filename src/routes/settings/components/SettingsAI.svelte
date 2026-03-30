@@ -2,6 +2,7 @@
   import { createEventDispatcher, onDestroy, onMount } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import { aiStore } from '$lib/stores/ai.js';
+  import { t } from '$lib/i18n/index.js';
   
   export let config;
   export let providers = [];
@@ -12,14 +13,14 @@
   const aiModes = [
     { 
       value: 'local', 
-      label: '基础模板', 
-      description: '固定格式统计报告',
+      label: $t('report.basicTemplate'), 
+      description: $t('settings.ai.fixedFormat'),
       requiresText: false
     },
     { 
       value: 'summary', 
-      label: 'AI 增强', 
-      description: '调用 AI 生成智能总结',
+      label: $t('settings.ai.aiEnhanced'), 
+      description: $t('settings.ai.aiEnhancedDesc'),
       requiresText: true
     },
   ];
@@ -98,7 +99,7 @@
   function handleChange() {
     // 阻止派发含有未验证文本模型的配置
     if (config.ai_mode === 'summary' && !isTextModelConfigured) {
-      aiStore.setError("必须先完成 API 连接测试才能保存");
+      aiStore.setError($t("settings.ai.mustTest"));
       return; 
     }
     dispatch('change', config);
@@ -116,7 +117,7 @@
         }
       });
       if (result.success) {
-        aiStore.setSuccess(result.message + (result.response_time_ms ? ` (${result.response_time_ms}ms)` : '') + '，请点击右上角保存设置');
+        aiStore.setSuccess(result.message + (result.response_time_ms ? ` (${result.response_time_ms}ms)` : '') + $t('settings.ai.saveTip'));
       } else {
         aiStore.setError(result.message);
       }
@@ -154,7 +155,7 @@
 <!-- 日报模式切换：紧凑的分段控制 -->
 <!-- 模式选择与连接状态解耦，用户可先选模式再配置模型 -->
 <fieldset class="mb-5">
-  <legend class="settings-label mb-2">日报模式</legend>
+  <legend class="settings-label mb-2">{$t("settings.ai.reportMode")}</legend>
   <div class="flex gap-2">
     {#each aiModes as mode}
       {@const isSelected = config.ai_mode === mode.value}
@@ -164,7 +165,7 @@
           // 仅当切换需要文字模型且未配置或测试失败时，给提示并阻止向父组件发送 change（避免自动保存未验证状态）
           if (mode.requiresText && !isTextModelConfigured) {
             config.ai_mode = mode.value; // 允许 UI 切换展开面板
-            aiStore.setError("请先配置并测试 AI 模型连接");
+            aiStore.setError($t("settings.ai.configAndTest"));
             // 不触发 handleChange()，防止父组件认为配置已完备
           } else {
             config.ai_mode = mode.value; 
@@ -191,7 +192,7 @@
     <!-- 提供商 + 测试按钮 -->
     <div class="flex items-end gap-2">
       <div class="flex-1">
-        <label for="ai-provider" class="settings-label mb-1.5">提供商</label>
+        <label for="ai-provider" class="settings-label mb-1.5">{$t('settings.ai.provider')}</label>
         <select
           id="ai-provider"
           value={config.text_model?.provider || 'ollama'}
@@ -219,14 +220,14 @@
         {#if textTestStatus === 'testing'}
           <span class="inline-flex items-center gap-1">
             <span class="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
-            测试中
+            {$t('settings.ai.testing')}
           </span>
         {:else if textTestStatus === 'success'}
-          ✓ 连接成功
+          {$t('settings.ai.testSuccess')}
         {:else if textTestStatus === 'error'}
-          ✗ 连接失败
+          {$t('settings.ai.testFailed')}
         {:else}
-          测试连接
+          {$t('settings.ai.testConnection')}
         {/if}
       </button>
     </div>
@@ -240,7 +241,7 @@
 
     <!-- API 地址 -->
     <div>
-      <label for="ai-endpoint" class="settings-label mb-1.5">API 地址</label>
+      <label for="ai-endpoint" class="settings-label mb-1.5">{$t('settings.ai.apiEndpoint')}</label>
       <input
         id="ai-endpoint"
         type="text"
@@ -254,7 +255,7 @@
     <!-- API 密钥（按需显示） -->
     {#if requiresApiKey}
       <div>
-        <label for="ai-apikey" class="settings-label mb-1.5">API 密钥</label>
+        <label for="ai-apikey" class="settings-label mb-1.5">{$t('settings.ai.apiKey')}</label>
         <div class="relative">
           {#if showApiKey}
             <input
@@ -278,8 +279,8 @@
           <button
             type="button"
             class="absolute inset-y-0 right-3 inline-flex items-center justify-center text-slate-400 transition hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
-            aria-label={showApiKey ? '隐藏 API 密钥' : '显示 API 密钥'}
-            title={showApiKey ? '隐藏 API 密钥' : '显示 API 密钥'}
+            aria-label={showApiKey ? $t('settings.ai.hideApiKey') : $t('settings.ai.showApiKey')}
+            title={showApiKey ? $t('settings.ai.hideApiKey') : $t('settings.ai.showApiKey')}
             on:click={() => {
               showApiKey = !showApiKey;
             }}
@@ -295,7 +296,7 @@
 
     <!-- 模型名称 -->
     <div>
-      <label for="ai-model" class="settings-label mb-1.5">模型名称</label>
+      <label for="ai-model" class="settings-label mb-1.5">{$t('settings.ai.modelName')}</label>
       <input
         id="ai-model"
         type="text"
@@ -312,6 +313,6 @@
 {:else}
   <!-- 未启用 AI 模式时的提示 -->
   <div class="pt-3 border-t border-slate-200 dark:border-slate-700">
-    <p class="settings-empty">切换到「AI 增强」模式后可配置 AI 模型</p>
+    <p class="settings-empty">{$t('settings.ai.aiModeHint')}</p>
   </div>
 {/if}

@@ -13,6 +13,7 @@ mod commands;
 mod config;
 mod database;
 mod error;
+mod i18n;
 mod idle_detector;
 mod monitor;
 mod ocr;

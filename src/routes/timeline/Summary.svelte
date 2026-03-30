@@ -1,6 +1,7 @@
 <script>
   import { invoke } from '@tauri-apps/api/core';
   import { link } from 'svelte-spa-router';
+  import { t } from '$lib/i18n/index.js';
 
   function getLocalDateString() {
     const now = new Date();
@@ -48,7 +49,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
         </svg>
       </a>
-      <h2 class="text-lg font-semibold text-slate-800 dark:text-white">时段摘要</h2>
+      <h2 class="text-lg font-semibold text-slate-800 dark:text-white">{$t('timeline.hourlySummary')}</h2>
     </div>
     
     <input
@@ -70,7 +71,7 @@
   {:else if summaries.length === 0}
     <div class="card p-6 text-center">
       <span class="text-2xl">📊</span>
-      <p class="text-slate-500 dark:text-slate-400 text-sm mt-2">暂无数据</p>
+      <p class="text-slate-500 dark:text-slate-400 text-sm mt-2">{$t('summary.noData')}</p>
     </div>
   {:else}
     <div class="space-y-3">
@@ -83,7 +84,7 @@
                 {String(summary.hour).padStart(2, '0')}:00
               </div>
               <div class="text-xs text-slate-400">
-                {Math.round(summary.total_duration / 60)}分钟
+                {Math.round(summary.total_duration / 60)}{$t('summary.minutes')}
               </div>
             </div>
             
