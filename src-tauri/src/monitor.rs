@@ -2421,7 +2421,12 @@ pub fn get_active_window() -> Result<ActiveWindow> {
     get_active_window_fast()
 }
 
-#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+#[cfg(target_os = "linux")]
+pub fn get_active_window_fast() -> Result<ActiveWindow> {
+    get_active_window()
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
 pub fn get_active_window_fast() -> Result<ActiveWindow> {
     Ok(ActiveWindow {
         app_name: "Unknown".to_string(),
